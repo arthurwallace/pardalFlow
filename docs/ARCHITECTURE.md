@@ -57,6 +57,10 @@ graph TD
 
 ### 2. Backend (FastAPI + Async Python)
 - **Framework**: FastAPI assíncrono para máxima concorrência e baixa latência.
+- **Comunicação em Tempo Real Contínua (Server-Sent Events / SSE)**:
+  - Eliminação de requisições contínuas de polling (`setInterval`).
+  - O status do bot (`/api/v1/bot/status/stream`) e o streaming de logs (`/api/v1/bot/logs/stream`) utilizam conexões unificadas e reativas via `EventSource`.
+  - O servidor notifica instantaneamente o frontend apenas quando há mudança de estado ou eventos (`is_running`, métricas, erros), mantendo a rede silenciosa e sem sobrecarga.
 - **Portas de Execução**:
   - **Interna do Container**: `8000`
   - **Host CasaOS / VPS**: `8085` (evitando conflito com portas 8000 de outros apps)
