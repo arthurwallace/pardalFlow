@@ -236,4 +236,21 @@ export class ApiService {
   clearDispatchedOffers(): Observable<{ message: string; count: number }> {
     return this.http.delete<any>(`${this.base}/metrics/dispatched-offers`, { headers: this.headers() });
   }
+
+  // Account Backup & Restore
+  exportAccountBackup(): Observable<Blob> {
+    return this.http.get(`${this.base}/backup/export`, {
+      headers: this.headers(),
+      responseType: 'blob'
+    });
+  }
+
+  importAccountBackup(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = this.auth.getToken();
+    return this.http.post<any>(`${this.base}/backup/import`, formData, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+  }
 }

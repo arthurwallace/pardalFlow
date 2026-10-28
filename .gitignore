@@ -55,6 +55,7 @@ backend/sessions/
 *.sqlite
 *.sqlite3
 *.dump
+*backup*.json
 pardal_promohub.db
 backend/pardal_promohub.db
 

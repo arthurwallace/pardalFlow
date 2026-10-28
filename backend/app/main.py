@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.api import auth, channels, destinations, settings as settings_api, bot, tester, metrics, analytics
+from app.api import auth, channels, destinations, settings as settings_api, bot, tester, metrics, analytics, backup
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -45,6 +45,7 @@ app.include_router(bot.router, prefix=api_v1)
 app.include_router(tester.router, prefix=api_v1)
 app.include_router(metrics.router, prefix=api_v1)
 app.include_router(analytics.router, prefix=api_v1)
+app.include_router(backup.router, prefix=api_v1)
 
 @app.get("/health", tags=["Health"])
 async def health_check():

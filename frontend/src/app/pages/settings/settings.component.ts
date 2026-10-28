@@ -52,6 +52,11 @@ import { Settings } from '../../core/models';
           <span>Sessão Telegram</span>
           <span class="tab-dot" [class.online]="tgStatus.is_connected" [class.offline]="!tgStatus.is_connected"></span>
         </button>
+
+        <button class="tab-btn" [class.active]="activeTab === 'backup'" (click)="selectTab('backup')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span>Backup & Migração</span>
+        </button>
       </div>
 
       <!-- TAB 1: TEMPLATES -->
@@ -319,6 +324,81 @@ import { Settings } from '../../core/models';
               </div>
               <button class="btn btn-teal" (click)="saveSettings()">
                 <span>Salvar Credenciais da API</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 6: BACKUP & MIGRAÇÃO DE CONTA -->
+      <div *ngIf="activeTab === 'backup'" class="tab-card card">
+        <div class="form-section">
+          <h2>Backup & Migração de Conta</h2>
+          <p class="section-desc">Exporte todas as suas configurações, canais monitorados, grupos e sessão do Telegram para migrar entre instâncias ou manter uma cópia de segurança.</p>
+
+          <div class="backup-grid">
+            <!-- EXPORT CARD -->
+            <div class="backup-box">
+              <div class="backup-box-header">
+                <div class="backup-icon-wrapper export-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="backup-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                </div>
+                <div>
+                  <h3 class="backup-box-title">Exportar Dados da Conta</h3>
+                  <p class="backup-box-desc">Gera um arquivo .json seguro com todos os seus dados para download.</p>
+                </div>
+              </div>
+
+              <div class="backup-included-items">
+                <div class="included-item">✓ Configurações & Chaves de IA/Afiliados</div>
+                <div class="included-item">✓ Canais Telegram Monitorados</div>
+                <div class="included-item">✓ Grupos de Destino WhatsApp & Palavras-chave</div>
+                <div class="included-item">✓ Canais de Destino Telegram</div>
+                <div class="included-item">✓ Sessões de Chips WhatsApp</div>
+                <div class="included-item">✓ Sessão Autenticada do Telegram (Login ativo)</div>
+              </div>
+
+              <button class="btn btn-teal btn-full" (click)="downloadAccountBackup()" [disabled]="backupExporting">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>{{ backupExporting ? 'Gerando Backup...' : 'Baixar Arquivo de Backup (.json)' }}</span>
+              </button>
+            </div>
+
+            <!-- IMPORT CARD -->
+            <div class="backup-box">
+              <div class="backup-box-header">
+                <div class="backup-icon-wrapper import-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="backup-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </div>
+                <div>
+                  <h3 class="backup-box-title">Restaurar / Importar no CasaOS</h3>
+                  <p class="backup-box-desc">Carregue o arquivo .json gerado localmente para deixar esta instância idêntica.</p>
+                </div>
+              </div>
+
+              <div class="import-dropzone" (click)="fileInput.click()">
+                <input #fileInput type="file" accept=".json" (change)="onBackupFileSelected($event)" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="dropzone-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="12" y2="12"></line><line x1="15" y1="15" x2="12" y2="12"></line></svg>
+                <div class="dropzone-text" *ngIf="!selectedBackupFile">
+                  <strong>Clique aqui para selecionar o arquivo .json</strong>
+                  <span>ou arraste o arquivo de backup para cá</span>
+                </div>
+                <div class="dropzone-text selected" *ngIf="selectedBackupFile">
+                  <strong class="text-cyan">📄 {{ selectedBackupFile.name }}</strong>
+                  <span>{{ (selectedBackupFile.size / 1024).toFixed(1) }} KB</span>
+                </div>
+              </div>
+
+              <div *ngIf="backupSuccessMessage" class="backup-alert success">
+                {{ backupSuccessMessage }}
+              </div>
+              <div *ngIf="backupErrorMessage" class="backup-alert error">
+                {{ backupErrorMessage }}
+              </div>
+
+              <button class="btn btn-secondary btn-full" (click)="uploadAccountBackup()" [disabled]="!selectedBackupFile || backupImporting">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="m8 17 4-4 4 4"></path><path d="M12 13v9"></path></svg>
+                <span>{{ backupImporting ? 'Restaurando dados...' : 'Restaurar Backup Nesta Instância' }}</span>
               </button>
             </div>
           </div>
@@ -865,12 +945,135 @@ import { Settings } from '../../core/models';
         margin: 1rem auto;
       }
     }
+
+    .backup-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.25rem;
+    }
+    .backup-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .backup-box-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .backup-icon-wrapper {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .export-icon {
+      background: rgba(20, 184, 166, 0.15);
+      color: #14b8a6;
+    }
+    .import-icon {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+    }
+    .backup-icon {
+      width: 24px;
+      height: 24px;
+    }
+    .backup-box-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 0.25rem 0;
+    }
+    .backup-box-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .backup-included-items {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    .included-item {
+      display: flex;
+      align-items: center;
+      color: #cbd5e1;
+    }
+    .btn-full {
+      width: 100%;
+      justify-content: center;
+    }
+    .import-dropzone {
+      border: 2px dashed rgba(56, 189, 248, 0.4);
+      background: rgba(56, 189, 248, 0.03);
+      border-radius: var(--radius-md);
+      padding: 1.75rem 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .import-dropzone:hover {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.08);
+    }
+    .dropzone-icon {
+      width: 36px;
+      height: 36px;
+      color: #38bdf8;
+    }
+    .dropzone-text {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.85rem;
+      color: var(--text-primary);
+      text-align: center;
+    }
+    .dropzone-text span {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    .backup-alert {
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+    .backup-alert.success {
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #4ade80;
+    }
+    .backup-alert.error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
   `]
 })
 export class SettingsComponent implements OnInit {
   api = inject(ApiService);
 
-  activeTab: 'templates' | 'ai' | 'blacklist' | 'credentials' | 'telegram' = 'templates';
+  activeTab: 'templates' | 'ai' | 'blacklist' | 'credentials' | 'telegram' | 'backup' = 'templates';
 
   settings: any = {
     message_template: '',
@@ -930,7 +1133,7 @@ export class SettingsComponent implements OnInit {
     this.loadTelegramStatus();
   }
 
-  selectTab(tab: 'templates' | 'ai' | 'blacklist' | 'credentials' | 'telegram') {
+  selectTab(tab: 'templates' | 'ai' | 'blacklist' | 'credentials' | 'telegram' | 'backup') {
     this.activeTab = tab;
     if (tab === 'telegram') {
       this.loadTelegramStatus();
@@ -1112,6 +1315,72 @@ export class SettingsComponent implements OnInit {
         this.tgLoading = false;
         this.tgAlertMessage = err.error?.detail || 'Erro ao desconectar sessão do Telegram.';
         this.tgAlertType = 'danger';
+      }
+    });
+  }
+
+  // Account Backup & Migration State
+  backupExporting = false;
+  backupImporting = false;
+  selectedBackupFile: File | null = null;
+  backupSuccessMessage = '';
+  backupErrorMessage = '';
+
+  downloadAccountBackup() {
+    this.backupExporting = true;
+    this.backupSuccessMessage = '';
+    this.backupErrorMessage = '';
+
+    this.api.exportAccountBackup().subscribe({
+      next: (blob) => {
+        this.backupExporting = false;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const now = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        a.href = url;
+        a.download = `pardalflow_backup_${now}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        this.backupSuccessMessage = 'Arquivo de backup exportado e baixado com sucesso!';
+      },
+      error: (err) => {
+        this.backupExporting = false;
+        this.backupErrorMessage = 'Erro ao exportar backup: ' + (err.error?.detail || err.message || 'Falha na conexão');
+      }
+    });
+  }
+
+  onBackupFileSelected(event: any) {
+    const file = event.target.files && event.target.files[0];
+    if (file) {
+      this.selectedBackupFile = file;
+      this.backupSuccessMessage = '';
+      this.backupErrorMessage = '';
+    }
+  }
+
+  uploadAccountBackup() {
+    if (!this.selectedBackupFile) return;
+
+    this.backupImporting = true;
+    this.backupSuccessMessage = '';
+    this.backupErrorMessage = '';
+
+    this.api.importAccountBackup(this.selectedBackupFile).subscribe({
+      next: (res) => {
+        this.backupImporting = false;
+        const details = res.restored || {};
+        const tgMsg = details.telegram_session_restored ? ' e Sessão do Telegram ativa conectada' : '';
+        this.backupSuccessMessage = `✅ Sucesso! ${details.channels_count || 0} canais, ${details.whatsapp_groups_count || 0} grupos, ${details.telegram_destinations_count || 0} destinos${tgMsg} restaurados com sucesso!`;
+        this.selectedBackupFile = null;
+        this.loadSettings();
+        this.loadTelegramStatus();
+      },
+      error: (err) => {
+        this.backupImporting = false;
+        this.backupErrorMessage = 'Erro ao restaurar backup: ' + (err.error?.detail || err.message || 'Arquivo inválido');
       }
     });
   }
