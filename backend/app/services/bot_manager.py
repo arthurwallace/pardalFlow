@@ -80,6 +80,7 @@ class UserBotInstance:
         self.stop_event = threading.Event()
         self.logs = deque(maxlen=2000)
         self.subscribers: List[asyncio.Queue] = []
+        self.status_subscribers: List[asyncio.Queue] = []
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self.metrics = {
             "detected": 0,
@@ -89,6 +90,46 @@ class UserBotInstance:
             "latencies": []
         }
         self.is_running = False
+
+    def get_status_dict(self) -> dict:
+        session_full_path = self.get_user_session_name()
+        session_display = os.path.basename(session_full_path)
+        latencies = self.metrics.get("latencies", [])
+        avg_lat = round(sum(latencies) / len(latencies), 2) if latencies else 0.0
+
+        return {
+            "user_id": self.user_id,
+            "is_running": self.is_running,
+            "session_name": session_display,
+            "metrics": {
+                "detected": self.metrics.get("detected", 0),
+                "sent": self.metrics.get("sent", 0),
+                "ai_errors": self.metrics.get("ai_errors", 0),
+                "conversion_errors": self.metrics.get("conversion_errors", 0),
+                "avg_latency": avg_lat
+            }
+        }
+
+    def notify_status_change(self):
+        status_data = self.get_status_dict()
+        dead_subscribers = []
+        for q in list(self.status_subscribers):
+            try:
+                q.put_nowait(status_data)
+            except Exception:
+                dead_subscribers.append(q)
+        for d in dead_subscribers:
+            if d in self.status_subscribers:
+                self.status_subscribers.remove(d)
+
+    def add_status_subscriber(self) -> asyncio.Queue:
+        q = asyncio.Queue(maxsize=50)
+        self.status_subscribers.append(q)
+        return q
+
+    def remove_status_subscriber(self, q: asyncio.Queue):
+        if q in self.status_subscribers:
+            self.status_subscribers.remove(q)
 
     def log(self, msg: str):
         ts = datetime.now(BRAZIL_TZ).strftime("%Y-%m-%d %H:%M:%S")
@@ -201,6 +242,7 @@ class UserBotInstance:
 
             channel_display_name = channel_match.get("description") or chat_title or f"@{chat_username}"
             self.metrics["detected"] += 1
+            self.notify_status_change()
             self.log(f"📩 Nova mensagem de canal ativo '{channel_display_name}' (ID: {chat_id})")
 
             original_text = msg.message or ""
@@ -297,6 +339,7 @@ class UserBotInstance:
             )
 
             self.metrics["sent"] += 1
+            self.notify_status_change()
 
             # 9. PERSISTÊNCIA DE OFERTAS DISPARADAS NO BANCO (Para exibição no Dashboard)
             try:
@@ -352,6 +395,7 @@ class UserBotInstance:
         if not api_id or not api_hash:
             self.log("⚠️ Credenciais do Telegram (API ID / Hash) não configuradas para este usuário. Configure na aba Configurações.")
             self.is_running = False
+            self.notify_status_change()
             return
         
         # Cada usuário com sua própria sessão individual do Telegram
@@ -363,6 +407,7 @@ class UserBotInstance:
         await self.client.start()
         self.log(f"✅ Cliente Telegram conectado com sucesso para o usuário! (Sessão: {session_display})")
         self.is_running = True
+        self.notify_status_change()
 
         self.client.add_event_handler(self._handle_message_event, events.NewMessage())
         self.log("👂 Monitorando canais ativos e configurados...")
@@ -379,33 +424,39 @@ class UserBotInstance:
                 except Exception:
                     pass
             self.is_running = False
+            self.notify_status_change()
             self.log("🛑 Bot finalizado.")
 
     def start(self):
         if self.thread and self.thread.is_alive():
             self.log("⚠️ Bot já está em execução.")
             self.is_running = True
+            self.notify_status_change()
             return
         self.stop_event.clear()
+        self.is_running = True
+        self.notify_status_change()
         def runner():
             try:
                 asyncio.run(self._run_loop())
             except Exception as e:
                 self.log(f"❌ Erro na thread do bot: {e}")
                 self.is_running = False
+                self.notify_status_change()
         self.thread = threading.Thread(target=runner, daemon=True)
         self.thread.start()
-        self.is_running = True
 
     def stop(self):
         if not (self.thread and self.thread.is_alive()):
             self.is_running = False
+            self.notify_status_change()
             return
         self.log("⛔ Solicitando parada do bot...")
         self.stop_event.set()
         self.thread.join(timeout=8)
         self.thread = None
         self.is_running = False
+        self.notify_status_change()
 
 class BotManager:
     _instances: Dict[str, UserBotInstance] = {}

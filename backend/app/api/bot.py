@@ -59,21 +59,49 @@ def _format_phone(phone: str) -> str:
 @router.get("/status")
 async def get_bot_status(current_user: dict = Depends(get_current_user)):
     bot = BotManager.get_instance(current_user["id"])
-    session_full_path = bot.get_user_session_name()
-    session_display = os.path.basename(session_full_path)
+    return bot.get_status_dict()
 
-    return {
-        "user_id": current_user["id"],
-        "is_running": bot.is_running,
-        "session_name": session_display,
-        "metrics": {
-            "detected": bot.metrics["detected"],
-            "sent": bot.metrics["sent"],
-            "ai_errors": bot.metrics["ai_errors"],
-            "conversion_errors": bot.metrics["conversion_errors"],
-            "avg_latency": round(sum(bot.metrics["latencies"]) / len(bot.metrics["latencies"]), 2) if bot.metrics["latencies"] else 0.0
+@router.get("/status/stream")
+async def stream_bot_status(token: str = Query(..., description="JWT Bearer token")):
+    """
+    Continuous Server-Sent Events (SSE) streaming endpoint for live real-time bot status.
+    Eliminates client polling: browser maintains 1 single persistent HTTP connection.
+    Server pushes updates reactively whenever the state changes.
+    """
+    user_id = verify_access_token(token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Token inválido ou expirado")
+
+    bot = BotManager.get_instance(user_id)
+    queue = bot.add_status_subscriber()
+
+    async def event_generator():
+        try:
+            # Send current status immediately upon connection
+            initial_status = bot.get_status_dict()
+            yield f"data: {json.dumps(initial_status)}\n\n"
+
+            while True:
+                try:
+                    update = await asyncio.wait_for(queue.get(), timeout=25.0)
+                    yield f"data: {json.dumps(update)}\n\n"
+                except asyncio.TimeoutError:
+                    # Lightweight keep-alive comment so proxy/browser never drops connection
+                    yield ": keep-alive\n\n"
+        except asyncio.CancelledError:
+            bot.remove_status_subscriber(queue)
+        finally:
+            bot.remove_status_subscriber(queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
         }
-    }
+    )
 
 @router.post("/start")
 async def start_bot(current_user: dict = Depends(get_current_user)):

@@ -868,20 +868,53 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   sessionName = 'Sessão individual';
-  private statusTimer: any;
+  private statusEventSource: EventSource | null = null;
 
   ngOnInit() {
     this.refreshUser();
-    this.checkBotStatus();
-    // Auto-update status every 3 seconds so start/stop reflects in real time
-    this.statusTimer = setInterval(() => {
-      this.checkBotStatus();
-    }, 3000);
+    this.initStatusStream();
   }
 
   ngOnDestroy() {
-    if (this.statusTimer) {
-      clearInterval(this.statusTimer);
+    this.stopStatusStream();
+  }
+
+  initStatusStream() {
+    this.stopStatusStream();
+    const url = this.api.getBotStatusStreamUrl();
+    if (!url) {
+      this.checkBotStatus();
+      return;
+    }
+
+    try {
+      this.statusEventSource = new EventSource(url);
+      this.statusEventSource.onmessage = (event) => {
+        try {
+          const res = JSON.parse(event.data);
+          if (res && typeof res.is_running === 'boolean') {
+            this.isBotRunning = res.is_running;
+            if (res.session_name) {
+              this.sessionName = res.session_name;
+            }
+          }
+        } catch (e) {
+          // Ignore parse errors or comments
+        }
+      };
+
+      this.statusEventSource.onerror = () => {
+        // EventSource automatically retries connection in the background
+      };
+    } catch (e) {
+      this.checkBotStatus();
+    }
+  }
+
+  stopStatusStream() {
+    if (this.statusEventSource) {
+      this.statusEventSource.close();
+      this.statusEventSource = null;
     }
   }
 

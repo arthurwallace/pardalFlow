@@ -47,6 +47,11 @@ export class ApiService {
     return `${this.base}/bot/logs/stream?token=${encodeURIComponent(token)}`;
   }
 
+  getBotStatusStreamUrl(): string {
+    const token = this.auth.getToken() || '';
+    return `${this.base}/bot/status/stream?token=${encodeURIComponent(token)}`;
+  }
+
   // Bot Control
   getBotStatus(): Observable<BotStatus> {
     return this.http.get<BotStatus>(`${this.base}/bot/status`, { headers: this.headers() });
