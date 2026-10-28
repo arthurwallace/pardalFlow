@@ -29,13 +29,13 @@ services:
     ports:
       - "5438:5432"
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-pardal_promohub}
-      POSTGRES_USER: ${POSTGRES_USER:-pardal_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pardal_secure_db_pass_2026}
+      POSTGRES_DB: pardal_promohub
+      POSTGRES_USER: pardal_user
+      POSTGRES_PASSWORD: pardal_secure_db_pass_2026
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - /DATA/AppData/pardalflow/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pardal_user} -d ${POSTGRES_DB:-pardal_promohub}"]
+      test: ["CMD-SHELL", "pg_isready -U pardal_user -d pardal_promohub"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -49,7 +49,7 @@ services:
             pt_br: "Porta do Banco de Dados PostgreSQL"
 
   backend:
-    image: ${PARDAL_IMAGE:-ghcr.io/arthurwallace/pardalflow:latest}
+    image: ghcr.io/arthurwallace/pardalflow:latest
     container_name: pardal_backend
     restart: unless-stopped
     ports:
@@ -58,12 +58,12 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-pardal_user}:${POSTGRES_PASSWORD:-pardal_secure_db_pass_2026}@postgres:5432/${POSTGRES_DB:-pardal_promohub}
+      - DATABASE_URL=postgresql://pardal_user:pardal_secure_db_pass_2026@postgres:5432/pardal_promohub
       - PORT=8000
       - HOST=0.0.0.0
-      - SECRET_KEY=${SECRET_KEY:-pardal_flow_secure_jwt_key_2026}
+      - SECRET_KEY=pardal_flow_secure_jwt_key_2026
     volumes:
-      - pardal_sessions:/app/backend/sessions
+      - /DATA/AppData/pardalflow/sessions:/app/backend/sessions
     networks:
       - pardal_net
     x-casaos:
@@ -72,12 +72,6 @@ services:
           description:
             en_us: "Web App Interface & REST API (Host: 8085 -> Container: 8000)"
             pt_br: "Interface Web do Painel & API REST (Host: 8085 -> Container: 8000)"
-
-volumes:
-  postgres_data:
-    name: pardal_postgres_data
-  pardal_sessions:
-    name: pardal_sessions
 
 networks:
   pardal_net:
