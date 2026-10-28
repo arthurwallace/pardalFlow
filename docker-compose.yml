@@ -35,7 +35,7 @@ services:
     volumes:
       - /DATA/AppData/pardalflow/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pardal_user -d pardal_promohub"]
+      test: ["CMD-SHELL", "pg_isready -d pardal_promohub -U pardal_user || pg_isready"]
       interval: 5s
       timeout: 5s
       retries: 5

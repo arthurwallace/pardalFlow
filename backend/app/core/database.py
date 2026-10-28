@@ -564,12 +564,9 @@ def get_db() -> PostgresDB:
         pg_db = os.getenv("POSTGRES_DB") or settings.POSTGRES_DB or "pardal_promohub"
         db_url = f"postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}"
 
-    # Auto-detect driver: if postgresql:// is used, ensure compatibility between psycopg3 and psycopg2
+    # Ensure SQLAlchemy uses psycopg2 driver directly without requiring psycopg v3
     if db_url.startswith("postgresql://"):
-        try:
-            import psycopg
-        except ImportError:
-            db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
     masked_url = db_url.split('@')[-1] if '@' in db_url else db_url
     logger.info(f"🐘 Conectando ao PostgreSQL exclusivo: {masked_url}")
