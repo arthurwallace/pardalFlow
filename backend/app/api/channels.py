@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 import json
+import os
 from telethon import TelegramClient
 
 from app.models.channel import ChannelCreate, ChannelUpdate, ChannelResponse, ChannelReorder
@@ -139,10 +140,20 @@ async def test_channels_reachability(current_user: dict = Depends(get_current_us
             "total": len(channels)
         }
 
-    test_session = f"test_session_{current_user['id'][:8]}"
-    client = TelegramClient(test_session, api_id, api_hash)
+    sessions_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "sessions")
+    user_session_path = os.path.join(sessions_dir, f"user_{current_user['id']}")
+    session_target = user_session_path if os.path.exists(f"{user_session_path}.session") else f"test_session_{current_user['id'][:8]}"
+
+    client = TelegramClient(session_target, api_id, api_hash)
     try:
-        await client.start()
+        await client.connect()
+        if not await client.is_user_authorized():
+            await client.disconnect()
+            return {
+                "results": [{"name": ch.get("name"), "accessible": False, "error": "Sessão do Telegram não autorizada. Conecte sua conta em Configurações."} for ch in channels],
+                "total": len(channels)
+            }
+
         for ch in channels:
             ch_name = ch.get("name")
             try:
@@ -161,6 +172,6 @@ async def test_channels_reachability(current_user: dict = Depends(get_current_us
                 })
         await client.disconnect()
     except Exception as e:
-        return {"error": f"Não foi possível iniciar cliente Telegram de teste: {e}", "results": results}
+        return {"error": f"Não foi possível conectar ao cliente Telegram: {e}", "results": results}
 
     return {"results": results, "total": len(results)}

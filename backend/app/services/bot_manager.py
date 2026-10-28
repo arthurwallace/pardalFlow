@@ -404,7 +404,14 @@ class UserBotInstance:
 
         self.log(f"Iniciando cliente Telegram Telethon (Sessão exclusiva: {session_display})...")
         self.client = TelegramClient(session_name, api_id, api_hash)
-        await self.client.start()
+        await self.client.connect()
+
+        if not await self.client.is_user_authorized():
+            self.log(f"⚠️ Sessão do Telegram '{session_display}' não está conectada/autorizada. Conecte sua conta na aba 'Configurações' -> 'Sessão do Telegram'.")
+            self.is_running = False
+            self.notify_status_change()
+            return
+
         self.log(f"✅ Cliente Telegram conectado com sucesso para o usuário! (Sessão: {session_display})")
         self.is_running = True
         self.notify_status_change()
