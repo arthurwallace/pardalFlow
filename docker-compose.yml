@@ -64,6 +64,7 @@ services:
       - SECRET_KEY=SUA_CHAVE_JWT_AQUI
     volumes:
       - /DATA/AppData/pardalflow/sessions:/app/backend/sessions
+      - /DATA/AppData/pardalflow/data:/app/backend/data
     networks:
       - pardal_net
     x-casaos:

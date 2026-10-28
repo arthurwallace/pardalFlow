@@ -580,12 +580,21 @@ def get_db() -> PostgresDB:
         logger.warning(f"⚠️ Não foi possível conectar ao PostgreSQL principal ({e}). Utilizando SQLite local como contingência.")
         # Fallback to local SQLite to ensure development server keeps running
         backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        sqlite_file = os.path.join(backend_dir, "pardal_promohub.db")
+        data_dir = os.path.join(backend_dir, "data")
+        os.makedirs(data_dir, exist_ok=True)
+        sqlite_file = os.path.join(data_dir, "pardal_promohub.db")
+        old_file = os.path.join(backend_dir, "pardal_promohub.db")
+        if os.path.exists(old_file) and not os.path.exists(sqlite_file):
+            import shutil
+            try:
+                shutil.copy2(old_file, sqlite_file)
+            except Exception:
+                pass
         sqlite_path = f"sqlite:///{sqlite_file}"
         engine = create_engine(sqlite_path)
         Base.metadata.create_all(engine)
         _ensure_sqlite_columns(engine)
-        logger.info(f"Banco de dados local SQLite inicializado com sucesso: {sqlite_file}")
+        logger.info(f"Banco de dados local SQLite persistente inicializado com sucesso: {sqlite_file}")
 
     session_factory = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
     _db_instance = PostgresDB(engine, session_factory)
