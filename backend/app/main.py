@@ -1,4 +1,14 @@
+import sys
 import os
+import logging
+
+if sys.platform.startswith("win"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,15 +19,27 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.api import auth, channels, destinations, settings as settings_api, bot, tester, metrics, analytics, backup
 
+logger = logging.getLogger(__name__)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: ensure DB connection and initial tables
-    print("🚀 Iniciando Pardal PromoHub Backend...")
+    try:
+        print("[Startup] Iniciando Pardal PromoHub Backend...")
+    except Exception:
+        pass
     db = get_db()
     if db is not None:
-        print("✅ Banco de dados PostgreSQL / Relacional pronto e sincronizado.")
+        try:
+            print("[Startup] Banco de dados pronto e sincronizado.")
+        except Exception:
+            pass
     yield
-    print("🛑 Encerrando Pardal PromoHub Backend...")
+    try:
+        print("[Shutdown] Encerrando Pardal PromoHub Backend...")
+    except Exception:
+        pass
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

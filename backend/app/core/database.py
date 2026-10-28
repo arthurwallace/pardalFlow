@@ -550,10 +550,17 @@ class PostgresDB:
 _db_instance: Optional[PostgresDB] = None
 
 def get_db() -> PostgresDB:
-    """Returns the primary PostgreSQL database instance, connecting exclusively to PostgreSQL with retry loop."""
+    """
+    Retorna a instância do banco de dados relacional.
+    - Em ambiente Docker/Produção (CasaOS): Conexão ESTRITA e exclusiva com PostgreSQL com loop de retry.
+    - Em ambiente de desenvolvimento local (Windows): Tenta PostgreSQL primeiro; se indisponível,
+      utiliza o SQLite local persistente (backend/pardal_promohub.db) para permitir execução imediata.
+    """
     global _db_instance
     if _db_instance is not None:
         return _db_instance
+
+    is_docker = os.path.exists("/.dockerenv") or os.getenv("IS_DOCKER", "").lower() == "true" or os.getenv("ENVIRONMENT", "").lower() == "production"
 
     db_url = (os.getenv("DATABASE_URL") or settings.DATABASE_URL or "").strip()
     if not db_url:
@@ -569,34 +576,61 @@ def get_db() -> PostgresDB:
         db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
     masked_url = db_url.split('@')[-1] if '@' in db_url else db_url
-    logger.info(f"🐘 Conectando ao PostgreSQL exclusivo: {masked_url}")
-
-    # Retry loop to wait for PostgreSQL container to be ready
-    max_retries = 10
-    retry_delay = 2
     engine = None
 
-    for attempt in range(1, max_retries + 1):
+    if is_docker:
+        logger.info(f"🐘 [PRODUÇÃO/DOCKER] Conectando ao PostgreSQL exclusivo: {masked_url}")
+        max_retries = 10
+        retry_delay = 2
+        for attempt in range(1, max_retries + 1):
+            try:
+                engine = create_engine(
+                    db_url,
+                    pool_pre_ping=True,
+                    pool_size=10,
+                    max_overflow=20,
+                    connect_args={"connect_timeout": 5}
+                )
+                with engine.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+                Base.metadata.create_all(engine)
+                logger.info("✅ Conexão com PostgreSQL estabelecida com sucesso!")
+                break
+            except Exception as e:
+                if attempt < max_retries:
+                    logger.warning(f"Aguardando PostgreSQL ficar pronto... (tentativa {attempt}/{max_retries}): {e}")
+                    time.sleep(retry_delay)
+                else:
+                    logger.error(f"❌ FALHA CRÍTICA: Conexão obrigatória com PostgreSQL falhou após {max_retries} tentativas: {e}")
+                    raise RuntimeError(f"FALHA CRÍTICA: Conexão obrigatória com PostgreSQL falhou: {e}")
+    else:
+        # Ambiente de desenvolvimento local (Windows/Mac/Linux)
+        logger.info(f"🐘 [DEV LOCAL] Tentando conexão com PostgreSQL: {masked_url}")
         try:
-            engine = create_engine(
+            temp_engine = create_engine(
                 db_url,
                 pool_pre_ping=True,
-                pool_size=10,
-                max_overflow=20,
-                connect_args={"connect_timeout": 5}
+                pool_size=5,
+                max_overflow=10,
+                connect_args={"connect_timeout": 2}
             )
-            with engine.connect() as conn:
+            with temp_engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-            Base.metadata.create_all(engine)
-            logger.info("✅ Conexão com PostgreSQL estabelecida com sucesso!")
-            break
+            Base.metadata.create_all(temp_engine)
+            engine = temp_engine
+            logger.info("✅ [DEV LOCAL] Conectado ao PostgreSQL com sucesso!")
         except Exception as e:
-            if attempt < max_retries:
-                logger.warning(f"Aguardando PostgreSQL ficar pronto... (tentativa {attempt}/{max_retries}): {e}")
-                time.sleep(retry_delay)
-            else:
-                logger.error(f"❌ FALHA CRÍTICA: Conexão obrigatória com PostgreSQL falhou após {max_retries} tentativas: {e}")
-                raise RuntimeError(f"FALHA CRÍTICA: Conexão obrigatória com PostgreSQL falhou: {e}")
+            logger.warning(f"⚠️ [DEV LOCAL] PostgreSQL não disponível ({e}). Utilizando SQLite local persistente para desenvolvimento.")
+            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            sqlite_file = os.path.join(backend_dir, "pardal_promohub.db")
+            sqlite_path = f"sqlite:///{sqlite_file}"
+            engine = create_engine(
+                sqlite_path,
+                connect_args={"check_same_thread": False}
+            )
+            Base.metadata.create_all(engine)
+            _ensure_sqlite_columns(engine)
+            logger.info(f"✅ [DEV LOCAL] Banco SQLite local conectado: {sqlite_file}")
 
     session_factory = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
     _db_instance = PostgresDB(engine, session_factory)
@@ -604,6 +638,33 @@ def get_db() -> PostgresDB:
     # Auto-seed essential default user and channels if database is completely empty
     _ensure_initial_seed(_db_instance)
     return _db_instance
+
+def _ensure_sqlite_columns(engine):
+    """Garante que colunas criadas em versões recentes existam no banco SQLite local."""
+    try:
+        with engine.connect() as conn:
+            for table_name, table in Base.metadata.tables.items():
+                try:
+                    res = conn.execute(text(f"PRAGMA table_info('{table_name}')")).fetchall()
+                    existing_cols = {row[1] for row in res}
+                    if not existing_cols:
+                        continue
+                    for col in table.columns:
+                        if col.name not in existing_cols:
+                            col_type = "TEXT"
+                            if "int" in str(col.type).lower():
+                                col_type = "INTEGER"
+                            elif "bool" in str(col.type).lower():
+                                col_type = "BOOLEAN"
+                            alter_sql = f'ALTER TABLE "{table_name}" ADD COLUMN "{col.name}" {col_type}'
+                            conn.execute(text(alter_sql))
+                            conn.commit()
+                            logger.info(f"Coluna '{col.name}' adicionada à tabela SQLite '{table_name}'.")
+                except Exception as ex:
+                    logger.debug(f"Aviso sync SQLite tabela {table_name}: {ex}")
+    except Exception as e:
+        logger.debug(f"Aviso sync SQLite: {e}")
+
 
 def _ensure_initial_seed(db: PostgresDB):
     """
