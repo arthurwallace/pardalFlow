@@ -59,7 +59,7 @@ pardalBot/
 ├── backend/                # API REST FastAPI + Telethon Worker
 │   ├── app/
 │   │   ├── api/            # Routers (Auth, Canais, Destinos, Configurações, Bot, Tester, Analytics)
-│   │   ├── core/           # Config, Segurança (JWT/Bcrypt), MongoDB
+│   │   ├── core/           # Config, Segurança (JWT Dinâmico/Bcrypt), PostgreSQL / Database
 │   │   ├── models/         # Pydantic Schemas
 │   │   ├── services/       # Link Converter, AI Formatter, Media Processor, Dispatcher, Bot Manager
 │   │   └── main.py         # Entrypoint FastAPI
@@ -68,6 +68,7 @@ pardalBot/
 ├── docs/                   # Documentação detalhada para desenvolvedores e agentes
 │   ├── ARCHITECTURE.md
 │   ├── API_DOCUMENTATION.md
+│   ├── CASAOS_DEPLOYMENT.md
 │   ├── CLOUDFLARE_DEPLOYMENT.md
 │   ├── LINK_CONVERSION_PIPELINE.md
 │   ├── MULTI_TENANCY_GUIDE.md
@@ -94,7 +95,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 python run_server.py
 ```
-A API estará disponível em `http://localhost:8000` e a documentação interativa Swagger em `http://localhost:8000/docs`.
+A API estará disponível em `http://localhost:8000` (ou `8085` via Docker) e a documentação Swagger em `http://localhost:8000/docs`.
 
 ### 2. Frontend (Angular 17+)
 
@@ -114,8 +115,9 @@ O sistema conta com orquestração completa em **Docker Compose** com banco de d
 ```bash
 docker compose up -d --build
 ```
-- **Painel Web SPA & REST API**: `http://localhost:8000` (ou IP do CasaOS)
-- **Banco PostgreSQL**: Porta `5438` (externa) e `5432` (interna)
+- **Painel Web SPA & REST API**: `http://<ip-do-casaos>:8085` (ou `http://localhost:8085`)
+- **Documentação Interativa Swagger**: `http://<ip-do-casaos>:8085/docs`
+- **Banco PostgreSQL**: Porta `5438` (host) e `5432` (container)
 - **Auto-migração**: Executa automaticamente na inicialização do container.
 
 Consulte o guia completo em [docs/CASAOS_DEPLOYMENT.md](docs/CASAOS_DEPLOYMENT.md).

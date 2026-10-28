@@ -1,38 +1,46 @@
-# 🏗️ Arquitetura do Sistema — Pardal PromoHub
+# 🏗️ Arquitetura do Sistema — PardalFlow (Pardal PromoHub)
 
-O **Pardal PromoHub** é uma plataforma distribuída para gestão de afiliados, desenhada para alta disponibilidade, desacoplamento e isolamento multi-inquilino (*multi-tenancy*).
+O **PardalFlow** é uma plataforma distribuída para automação, captura e conversão de ofertas para afiliados, desenhada com foco em alta disponibilidade, performance assíncrona, segurança em camadas e isolamento completo multi-inquilino (*Logical Multi-Tenancy*).
 
 ---
 
-## 📐 Diagrama de Alto Nível
+## 📐 Diagrama de Arquitetura Atual
 
 ```mermaid
 graph TD
-    subgraph "Telegram"
-        TC[Canais Monitorados] -->|Novos Posts| BOT[Telethon MTProto Listener]
+    subgraph "Fontes de Origem - Telegram MTProto"
+        TC[Canais Monitorados] -->|Novos Posts em Tempo Real| BOT[Telethon MTProto Listener]
     end
 
-    subgraph "Backend - Python FastAPI"
+    subgraph "Backend - Python FastAPI (Container: 8000 / Host: 8085)"
         BOT --> PIPELINE[Pipeline de Processamento]
         PIPELINE --> SHORT[Desencurtador de URLs]
-        SHORT --> CONV[Conversor de Links de Afiliados]
-        CONV --> AI[OpenRouter LLM Formatter]
-        AI --> MEDIA[Processador de Mídia / og:image]
+        PIPELINE --> CONV[Conversor de Links de Afiliados]
+        CONV -->|GraphQL SHA256| SHOPEE[Shopee Affiliate API]
+        CONV -->|Webhooks n8n| ML[Mercado Livre / Amazon / Magalu]
+        PIPELINE --> AI[OpenRouter / Groq / Gemini LLM]
+        AI --> MEDIA[Processador de Mídia / og:image / FFmpeg]
         MEDIA --> DISP[Dispatcher Multicanal]
 
-        API[FastAPI REST API] --> DB[(MongoDB Atlas)]
-        PIPELINE --> DB
+        API[FastAPI REST API /api/v1] --> DB_LAYER[Camada Unificada de Dados]
+        PIPELINE --> DB_LAYER
     end
 
-    subgraph "Destinos"
+    subgraph "Persistência e Banco Relacional (Container: 5432 / Host: 5438)"
+        DB_LAYER --> PG[(PostgreSQL 16 Alpine)]
+        DB_LAYER -.->|Contingência Local| SQLITE[(SQLite Contingency Fallback)]
+        BOT --> SESSIONS[Volumes de Sessões .session /backend/sessions]
+    end
+
+    subgraph "Destinos das Ofertas"
         DISP -->|Markdown Format| TGD[Canais Destino Telegram]
-        DISP -->|Round-Robin| WPD[Grupos WhatsApp]
-        DISP -->|Apenas Falhas| ADMIN[Canais Admin / Alerta]
+        DISP -->|Round-Robin com Aquecimento| WPD[Grupos WhatsApp]
+        DISP -->|Apenas Falhas e Erros| ADMIN[Canais / Grupos de Admin]
     end
 
     subgraph "Frontend - Angular 17+ SPA"
-        USER((Usuário Afiliado)) --> UI[Interface Web Moderna]
-        UI -->|JWT Auth / REST| API
+        USER((Usuário Afiliado)) --> UI[Interface Web Moderna & Responsiva]
+        UI -->|JWT Bearer / REST| API
     end
 ```
 
@@ -40,26 +48,53 @@ graph TD
 
 ## 🧩 Componentes Principais
 
-### 1. Frontend (Angular 17+ Standalone)
+### 1. Frontend (Angular 17+ Standalone SPA)
 - **Tecnologias**: Angular 17+, TypeScript, Vanilla CSS Tokens, RxJS, Signals.
 - **Filosofia de Design**: Minimalista, moderno, com tema escuro padrão em tons de azul escuro (`#080c16`, `#0f172a`, `#1e293b`) e suporte completo a modo claro via `ThemeService`.
-- **Roteamento SPA**: Protegido por `authGuard`, com fallback configurado para Cloudflare Pages via `_redirects`.
+- **Roteamento SPA**: Protegido por `authGuard`, com fallback configurado para Cloudflare Pages via `_redirects` e servidor FastAPI estático.
+- **Simulador Interativo**: Prévia de layout das mensagens antes do disparo real com seletor de grupos de destino.
+- **Filtros Temporais Inteligentes**: Visualização de métricas por Hoje, Ontem, Semana, Mês ou Todo o período.
 
 ### 2. Backend (FastAPI + Async Python)
-- **Framework**: FastAPI assíncrono para máxima performance e baixa latência.
-- **Autenticação**: Tokens JWT (HMAC-SHA256) com senhas criptografadas via Bcrypt / PBKDF2.
+- **Framework**: FastAPI assíncrono para máxima concorrência e baixa latência.
+- **Portas de Execução**:
+  - **Interna do Container**: `8000`
+  - **Host CasaOS / VPS**: `8085` (evitando conflito com portas 8000 de outros apps)
+- **Segurança & JWT Dinâmico**:
+  - Geração automática de chave de 256 bits (`secrets.token_hex(32)`) caso `SECRET_KEY` não seja fornecida no `.env`.
+  - Zero segredos ou credenciais estáticas expostas no código.
 - **Camadas**:
-  - `app/api/`: Controladores REST desacoplados.
-  - `app/core/`: Conexão com MongoDB, segurança e configurações globais.
+  - `app/api/`: Controladores REST desacoplados (auth, bot, channels, destinations, settings, tester, metrics, analytics).
+  - `app/core/`: Conexão com banco relacional, segurança criptográfica e configurações de arquitetura.
   - `app/models/`: Validação de esquemas com Pydantic v2.
-  - `app/services/`: Serviços de domínio reutilizáveis (conversão, IA, mídia, despacho, bot).
+  - `app/services/`: Serviços de domínio especializados (`BotManager`, `LinkConverterService`, `AIFormatterService`, `DispatcherService`, `MediaProcessorService`).
 
-### 3. Banco de Dados (MongoDB)
-- Coleções estruturadas com chave de inquilino `user_id`:
-  - `users`: Credenciais e perfis de usuários.
-  - `user_configs`: Modelos de mensagem, prompt de IA e credenciais privadas.
-  - `channels`: Canais monitorados com configurações de mídia e tags.
-  - `whatsapp_groups`: Grupos de destino com regras de palavras-chave.
-  - `telegram_destinations`: Canais Telegram com flag de destino administrativo.
-  - `whatsapp_sessions`: Sessões WhatsApp para distribuição round-robin.
-  - `logs` e `metrics`: Telemetria e histórico operacional.
+### 3. Banco de Dados Relacional (PostgreSQL 16)
+- **Banco Principal**: PostgreSQL 16 Alpine rodando em container dedicado.
+  - **Porta Host**: `5438` (evita conflito com o PostgreSQL padrão na 5432).
+  - **Volume de Dados**: `pardal_postgres_data` persistente.
+- **Contingência Automática**:
+  - O sistema detecta se o PostgreSQL estiver temporariamente indisponível e utiliza contingência SQLite local sem interromper o serviço.
+- **Isolamento Multi-Tenancy**:
+  - Todas as tabelas possuem índice e filtro obrigatório por `user_id`:
+    - `users`: Usuários e senhas criptografadas (Bcrypt / PBKDF2).
+    - `user_configs`: Credenciais de API e modelos privados de cada usuário.
+    - `channels`: Canais monitorados com configurações de mídia e tags.
+    - `whatsapp_groups`: Grupos de destino com regras de palavras-chave e rodapés.
+    - `telegram_destinations`: Canais Telegram com flag de destino administrativo.
+    - `whatsapp_sessions`: Sessões WhatsApp para distribuição round-robin.
+    - `sent_offers`: Histórico de produtos reais disparados aos destinos.
+    - `logs`: Histórico de eventos e auditoria de execução.
+
+---
+
+## 🔒 Princípio de Isolamento do `.env`
+
+O arquivo `.env` do projeto foi projetado estritamente para **arquitetura de infraestrutura**:
+- Conexão com o banco (`DATABASE_URL`, `POSTGRES_*`)
+- Chave JWT de arquitetura (`SECRET_KEY`)
+- Portas e Hosts do servidor (`PORT`, `HOST`)
+- Webhooks globais opcionais de microsserviços (n8n)
+
+> [!IMPORTANT]
+> **Nenhuma credencial de usuário** (Telegram API ID/Hash, chaves de afiliados Shopee, chaves de IA OpenRouter/Groq/Google) reside no `.env`. Todas as credenciais de terceiros são vinculadas e gerenciadas individualmente por cada usuário através da interface web na aba **Configurações**.
