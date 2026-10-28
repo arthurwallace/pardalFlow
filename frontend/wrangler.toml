@@ -1,0 +1,5 @@
+name = "pardal-frontend"
+compatibility_date = "2026-04-01"
+
+[site]
+bucket = "./dist/frontend/browser"

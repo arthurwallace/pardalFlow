@@ -1,0 +1,75 @@
+# ==============================================================
+# Pardal PromoHub - Git Ignore Rules
+# ==============================================================
+
+# Node.js / Angular
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Telegram Sessions & Authentication Keys (NEVER COMMIT)
+*.session
+*.session-journal
+sessions/
+backend/sessions/
+.jwt_secret
+**/.jwt_secret
+
+# Environment & Secrets (NEVER COMMIT SENSITIVE KEYS)
+.env
+.env.*
+*.env
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Local Databases & Backups (NEVER COMMIT REAL USER DATA)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.dump
+pardal_promohub.db
+backend/pardal_promohub.db
+
+# Logs & Temporary Files
+*.log
+/logs/
+backend/logs/
+.system_generated/
+scratch/
+
+# IDEs & Operating System Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Cloudflare & Deployment caches
+.wrangler/

@@ -1,0 +1,89 @@
+version: '3.8'
+
+# ==========================================
+# CasaOS App Store & Dashboard Metadata
+# ==========================================
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+    - arm
+  main: backend
+  description:
+    en_us: "Pardal PromoHub - Complete affiliate automation platform and Telegram/WhatsApp promotion bot"
+    pt_br: "Pardal PromoHub - Sistema profissional de automação e gestão de canais de afiliados e bots Telegram/WhatsApp"
+  tag: "Afiliados & E-commerce"
+  thumbnail: "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/telegram.png"
+  title:
+    en_us: "Pardal PromoHub"
+    pt_br: "Pardal PromoHub"
+  index: /
+  port_map: "8085"
+  scheme: http
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pardal_postgres
+    restart: unless-stopped
+    ports:
+      - "5438:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pardal_promohub}
+      POSTGRES_USER: ${POSTGRES_USER:-pardal_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pardal_user} -d ${POSTGRES_DB:-pardal_promohub}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pardal_net
+    x-casaos:
+      ports:
+        - container: "5432"
+          description:
+            en_us: "PostgreSQL Database Port"
+            pt_br: "Porta do Banco de Dados PostgreSQL"
+
+  backend:
+    # Imagem publicada no GitHub Container Registry (GHCR) ou Docker Hub:
+    image: ${PARDAL_IMAGE:-ghcr.io/arthurwallace/pardalbot:latest}
+    # Caso prefira compilar a imagem localmente direto do código-fonte:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    container_name: pardal_backend
+    restart: unless-stopped
+    ports:
+      - "8085:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - backend/.env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-pardal_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pardal_promohub}
+      - PORT=8000
+      - HOST=0.0.0.0
+    volumes:
+      - ./backend/sessions:/app/backend/sessions
+    networks:
+      - pardal_net
+    x-casaos:
+      ports:
+        - container: "8000"
+          description:
+            en_us: "Web App Interface & REST API (Host: 8085 -> Container: 8000)"
+            pt_br: "Interface Web do Painel & API REST (Host: 8085 -> Container: 8000)"
+
+volumes:
+  postgres_data:
+    name: pardal_postgres_data
+
+networks:
+  pardal_net:
+    name: pardal_net
+    driver: bridge
