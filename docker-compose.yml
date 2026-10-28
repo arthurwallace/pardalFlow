@@ -31,7 +31,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-pardal_promohub}
       POSTGRES_USER: ${POSTGRES_USER:-pardal_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pardal_secure_db_pass_2026}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -49,12 +49,7 @@ services:
             pt_br: "Porta do Banco de Dados PostgreSQL"
 
   backend:
-    # Imagem publicada no GitHub Container Registry (GHCR) ou Docker Hub:
-    image: ${PARDAL_IMAGE:-ghcr.io/arthurwallace/pardalbot:latest}
-    # Caso prefira compilar a imagem localmente direto do código-fonte:
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
+    image: ${PARDAL_IMAGE:-ghcr.io/arthurwallace/pardalflow:latest}
     container_name: pardal_backend
     restart: unless-stopped
     ports:
@@ -62,14 +57,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    env_file:
-      - backend/.env
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-pardal_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pardal_promohub}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-pardal_user}:${POSTGRES_PASSWORD:-pardal_secure_db_pass_2026}@postgres:5432/${POSTGRES_DB:-pardal_promohub}
       - PORT=8000
       - HOST=0.0.0.0
+      - SECRET_KEY=${SECRET_KEY:-pardal_flow_secure_jwt_key_2026}
     volumes:
-      - ./backend/sessions:/app/backend/sessions
+      - pardal_sessions:/app/backend/sessions
     networks:
       - pardal_net
     x-casaos:
@@ -82,6 +76,8 @@ services:
 volumes:
   postgres_data:
     name: pardal_postgres_data
+  pardal_sessions:
+    name: pardal_sessions
 
 networks:
   pardal_net:
