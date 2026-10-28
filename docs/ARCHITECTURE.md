@@ -73,12 +73,11 @@ graph TD
   - `app/models/`: Validação de esquemas com Pydantic v2.
   - `app/services/`: Serviços de domínio especializados (`BotManager`, `LinkConverterService`, `AIFormatterService`, `DispatcherService`, `MediaProcessorService`).
 
-### 3. Banco de Dados Relacional (PostgreSQL 16)
-- **Banco Principal**: PostgreSQL 16 Alpine rodando em container dedicado.
+### 3. Banco de Dados Relacional Exclusivo (PostgreSQL 16)
+- **Banco Principal**: PostgreSQL 16 Alpine rodando em container dedicado de alta performance.
   - **Porta Host**: `5438` (evita conflito com o PostgreSQL padrão na 5432).
-  - **Volume de Dados**: `pardal_postgres_data` persistente.
-- **Contingência Automática**:
-  - O sistema detecta se o PostgreSQL estiver temporariamente indisponível e utiliza contingência SQLite local sem interromper o serviço.
+  - **Volume de Dados**: `/DATA/AppData/pardalflow/postgres` montado em `/var/lib/postgresql/data` (100% persistente e imune a atualizações/pulls de imagem).
+  - **Resiliência de Inicialização**: O backend aguarda ativamente a prontidão do socket PostgreSQL durante a inicialização com loop de retry inteligente antes de iniciar as rotas. Zero SQLite.
 - **Isolamento Multi-Tenancy**:
   - Todas as tabelas possuem índice e filtro obrigatório por `user_id`:
     - `users`: Usuários e senhas criptografadas (Bcrypt / PBKDF2).

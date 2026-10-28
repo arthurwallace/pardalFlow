@@ -1,6 +1,7 @@
 import os
 import json
 import uuid
+import time
 import logging
 from datetime import datetime
 from typing import Optional, List, Dict, Any
@@ -549,19 +550,30 @@ class PostgresDB:
 _db_instance: Optional[PostgresDB] = None
 
 def get_db() -> PostgresDB:
-    """Returns the primary PostgreSQL database instance, initializing tables if needed."""
+    """Returns the primary PostgreSQL database instance, connecting exclusively to PostgreSQL with retry loop."""
     global _db_instance
     if _db_instance is not None:
         return _db_instance
 
     db_url = (os.getenv("DATABASE_URL") or settings.DATABASE_URL or "").strip()
+    if not db_url:
+        pg_user = os.getenv("POSTGRES_USER") or settings.POSTGRES_USER or "pardal_user"
+        pg_pass = os.getenv("POSTGRES_PASSWORD") or settings.POSTGRES_PASSWORD or ""
+        pg_host = os.getenv("POSTGRES_HOST") or "postgres"
+        pg_port = os.getenv("POSTGRES_PORT") or "5432"
+        pg_db = os.getenv("POSTGRES_DB") or settings.POSTGRES_DB or "pardal_promohub"
+        db_url = f"postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}"
+
+    masked_url = db_url.split('@')[-1] if '@' in db_url else db_url
+    logger.info(f"🐘 Conectando ao PostgreSQL exclusivo: {masked_url}")
+
+    # Retry loop to wait for PostgreSQL container to be ready
+    max_retries = 10
+    retry_delay = 2
     engine = None
 
-    try:
-        # Try primary PostgreSQL connection if configured
-        if db_url and "postgresql" in db_url:
-            masked_url = db_url.split('@')[-1] if '@' in db_url else db_url
-            logger.info(f"Connecting to PostgreSQL: {masked_url}")
+    for attempt in range(1, max_retries + 1):
+        try:
             engine = create_engine(
                 db_url,
                 pool_pre_ping=True,
@@ -569,32 +581,18 @@ def get_db() -> PostgresDB:
                 max_overflow=20,
                 connect_args={"connect_timeout": 5}
             )
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
             Base.metadata.create_all(engine)
-            logger.info("Conectado ao PostgreSQL com sucesso!")
-        elif db_url:
-            engine = create_engine(db_url)
-            Base.metadata.create_all(engine)
-        else:
-            raise ValueError("DATABASE_URL não configurada no .env. Inicializando contingência local SQLite.")
-    except Exception as e:
-        logger.warning(f"⚠️ Não foi possível conectar ao PostgreSQL principal ({e}). Utilizando SQLite local como contingência.")
-        # Fallback to local SQLite to ensure development server keeps running
-        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        data_dir = os.path.join(backend_dir, "data")
-        os.makedirs(data_dir, exist_ok=True)
-        sqlite_file = os.path.join(data_dir, "pardal_promohub.db")
-        old_file = os.path.join(backend_dir, "pardal_promohub.db")
-        if os.path.exists(old_file) and not os.path.exists(sqlite_file):
-            import shutil
-            try:
-                shutil.copy2(old_file, sqlite_file)
-            except Exception:
-                pass
-        sqlite_path = f"sqlite:///{sqlite_file}"
-        engine = create_engine(sqlite_path)
-        Base.metadata.create_all(engine)
-        _ensure_sqlite_columns(engine)
-        logger.info(f"Banco de dados local SQLite persistente inicializado com sucesso: {sqlite_file}")
+            logger.info("✅ Conexão com PostgreSQL estabelecida com sucesso!")
+            break
+        except Exception as e:
+            if attempt < max_retries:
+                logger.warning(f"Aguardando PostgreSQL ficar pronto... (tentativa {attempt}/{max_retries}): {e}")
+                time.sleep(retry_delay)
+            else:
+                logger.error(f"❌ FALHA CRÍTICA: Conexão obrigatória com PostgreSQL falhou após {max_retries} tentativas: {e}")
+                raise RuntimeError(f"FALHA CRÍTICA: Conexão obrigatória com PostgreSQL falhou: {e}")
 
     session_factory = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
     _db_instance = PostgresDB(engine, session_factory)
@@ -602,32 +600,6 @@ def get_db() -> PostgresDB:
     # Auto-seed essential default user and channels if database is completely empty
     _ensure_initial_seed(_db_instance)
     return _db_instance
-
-def _ensure_sqlite_columns(engine):
-    """Ensures SQLite existing tables have all columns added in schema updates."""
-    try:
-        with engine.connect() as conn:
-            for table_name, table in Base.metadata.tables.items():
-                try:
-                    res = conn.execute(text(f"PRAGMA table_info('{table_name}')")).fetchall()
-                    existing_cols = {row[1] for row in res}
-                    if not existing_cols:
-                        continue
-                    for col in table.columns:
-                        if col.name not in existing_cols:
-                            col_type = "TEXT"
-                            if "int" in str(col.type).lower():
-                                col_type = "INTEGER"
-                            elif "bool" in str(col.type).lower():
-                                col_type = "BOOLEAN"
-                            alter_sql = f'ALTER TABLE "{table_name}" ADD COLUMN "{col.name}" {col_type}'
-                            conn.execute(text(alter_sql))
-                            conn.commit()
-                            logger.info(f"Coluna '{col.name}' adicionada à tabela SQLite '{table_name}'.")
-                except Exception as ex:
-                    logger.debug(f"Aviso sync SQLite tabela {table_name}: {ex}")
-    except Exception as e:
-        logger.debug(f"Aviso sync SQLite: {e}")
 
 def _ensure_initial_seed(db: PostgresDB):
     """
