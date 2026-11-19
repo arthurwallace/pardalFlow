@@ -48,7 +48,8 @@ backend/sessions/
 **/.env
 **/.env.*
 !.env.example
-!**/.env.example
+!.env.*.example
+!*.example
 
 # Local Databases & Backups (NEVER COMMIT REAL USER DATA)
 *.db

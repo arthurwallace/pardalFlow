@@ -27,9 +27,9 @@ services:
     ports:
       - "5438:5432"
     environment:
-      POSTGRES_DB: pardal_promohub
-      POSTGRES_USER: pardal_user
-      POSTGRES_PASSWORD: pardal_secure_pg_pass_2026
+      POSTGRES_DB: ${POSTGRES_DB:-pardal_promohub}
+      POSTGRES_USER: ${POSTGRES_USER:-pardal_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ${PARDAL_PG_PATH:-./data/postgres}:/var/lib/postgresql/data
     healthcheck:
