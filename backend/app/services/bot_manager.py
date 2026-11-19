@@ -204,18 +204,6 @@ class UserBotInstance:
 
         # Dedicated user session
         user_session_path = os.path.join(sessions_dir, f"telegram_user_{self.user_id}")
-
-        # If this is Arthur and he has the existing authenticated session, migrate/copy it so auth is retained
-        if self.user_id == "6ae0df757ec0ae10ea42e1a5":
-            legacy_session = os.path.join(backend_dir, "pardaldaspromos_session_local.session")
-            target_session_file = f"{user_session_path}.session"
-            if os.path.exists(legacy_session) and not os.path.exists(target_session_file):
-                try:
-                    shutil.copy(legacy_session, target_session_file)
-                    print(f"Migrated legacy session to user session: {target_session_file}")
-                except Exception as e:
-                    print(f"Could not copy legacy session: {e}")
-
         return user_session_path
 
     async def _handle_message_event(self, event):
@@ -247,7 +235,7 @@ class UserBotInstance:
 
             original_text = msg.message or ""
             user_config = self.get_user_config()
-            converter = LinkConverterService(user_config)
+            converter = LinkConverterService(user_config, user_id=self.user_id)
             formatter = AiFormatterService(user_config)
 
             # 2. Resolve shorteners
@@ -315,7 +303,11 @@ class UserBotInstance:
                 whatsapp_sessions=wa_sessions,
                 default_footer=default_footer,
                 whatsapp_admin_dest=user_config.get("whatsapp_admin_dest"),
-                whatsapp_send_errors=user_config.get("whatsapp_send_errors", True)
+                whatsapp_send_errors=user_config.get("whatsapp_send_errors", True),
+                waha_base_url=user_config.get("waha_base_url"),
+                waha_api_key=user_config.get("waha_api_key"),
+                user_id=self.user_id,
+                user_config=user_config
             )
 
             # Send Telegram

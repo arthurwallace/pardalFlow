@@ -25,7 +25,7 @@ async def test_convert_links(req: TestConversionRequest, current_user: dict = De
             if doc:
                 user_config = doc.get("data", {})
 
-        converter = LinkConverterService(user_config)
+        converter = LinkConverterService(user_config, user_id=current_user["id"])
         resolved = await converter.resolve_shorteners(req.text)
         converted, success = await converter.convert_all_links(resolved, ml_tag=req.custom_ml_tag)
 
@@ -91,7 +91,7 @@ async def test_full_pipeline(req: TestFullPipelineRequest, current_user: dict = 
             if doc:
                 user_config = doc.get("data", {})
 
-        converter = LinkConverterService(user_config)
+        converter = LinkConverterService(user_config, user_id=current_user["id"])
         formatter = AiFormatterService(user_config)
 
         # 1. Clean forbidden lines
@@ -140,7 +140,7 @@ async def dispatch_now(req: DispatchNowRequest, current_user: dict = Depends(get
             if doc:
                 user_config = doc.get("data", {})
 
-        converter = LinkConverterService(user_config)
+        converter = LinkConverterService(user_config, user_id=current_user["id"])
         formatter = AiFormatterService(user_config)
 
         cleaned = formatter.remove_forbidden_lines(req.text)

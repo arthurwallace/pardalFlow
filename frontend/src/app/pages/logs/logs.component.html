@@ -1,0 +1,68 @@
+﻿    <div class="logs-page">
+      <!-- HEADER CATEGORY & TITLE -->
+      <div class="page-header">
+        <div>
+          <span class="category-tag">TELEMETRIA E AUDITORIA</span>
+          <h1 class="main-title">Logs & <span class="highlight-text">Eventos em Tempo Real</span></h1>
+          <p class="subtitle">
+            Acompanhe em tempo real (Server-Sent Events) as mensagens capturadas dos canais ativos, conversões de links e entregas nos grupos.
+          </p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary" (click)="toggleStreaming()">
+            <span class="stream-dot" [class.active]="isStreaming"></span>
+            <span>{{ isStreaming ? 'Pausar Streaming' : 'Retomar Streaming' }}</span>
+          </button>
+          <button class="btn btn-secondary" (click)="clearLogs()">
+            <span>Limpar Tela</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- STREAMING STATUS BAR -->
+      <div class="stream-status-bar">
+        <div class="status-left">
+          <span class="live-badge" [class.live-active]="isStreaming" [class.live-paused]="!isStreaming">
+            <span class="pulse-indicator"></span>
+            {{ isStreaming ? 'STREAMING ATIVO (SSE)' : 'STREAMING PAUSADO' }}
+          </span>
+          <span class="filter-tip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tip-icon"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            Exibindo exclusivamente mensagens de canais com monitoramento ativo.
+          </span>
+        </div>
+        <span class="log-count">{{ logs.length }} eventos capturados</span>
+      </div>
+
+      <!-- LOG TERMINAL CONTAINER -->
+      <div class="card terminal-card">
+        <div class="terminal-head">
+          <div class="terminal-dots">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <span class="terminal-title">pardalbot&#64;telethon-listener: stdout (live-stream)</span>
+          <span class="terminal-badge">{{ connectionState }}</span>
+        </div>
+
+        <div class="terminal-body" #terminalBody>
+          <div *ngIf="logs.length === 0" class="log-empty">
+            Aguardando eventos dos canais com monitoramento ativo...
+          </div>
+          <div *ngFor="let log of logs; trackBy: trackByFn" class="log-line">
+            <span class="log-time">[{{ log.timestamp | date:'HH:mm:ss' }}]</span>
+            <span 
+              class="log-msg" 
+              [class.text-green]="log.message.includes('✅')" 
+              [class.text-red]="log.message.includes('❌') || log.message.includes('Erro')" 
+              [class.text-blue]="log.message.includes('📩') || log.message.includes('Iniciando')"
+              [class.text-yellow]="log.message.includes('⚠️')"
+              [class.text-teal]="log.message.includes('🤖')"
+            >
+              {{ log.message }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>

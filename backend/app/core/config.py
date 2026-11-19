@@ -3,11 +3,18 @@ import secrets
 from pathlib import Path
 from dotenv import load_dotenv
 
-env_path = Path(__file__).resolve().parent.parent.parent / '.env'
-if env_path.exists():
-    load_dotenv(dotenv_path=env_path)
-else:
-    load_dotenv()
+root_dir = Path(__file__).resolve().parent.parent.parent
+env_default = root_dir / '.env'
+env_dev = root_dir / '.env.development'
+
+# Carrega primeiro o .env base
+if env_default.exists():
+    load_dotenv(dotenv_path=env_default)
+
+# Se estiver em desenvolvimento e houver .env.development, sobrescreve variáveis para dev
+current_env = os.getenv('ENVIRONMENT', 'development').lower()
+if current_env != 'production' and env_dev.exists():
+    load_dotenv(dotenv_path=env_dev, override=True)
 
 def _get_or_generate_jwt_secret() -> str:
     """
@@ -40,6 +47,7 @@ class Settings:
     PROJECT_NAME: str = os.getenv('PROJECT_NAME', 'Pardal PromoHub')
     VERSION: str = os.getenv('VERSION', '2.0.0')
     API_V1_PREFIX: str = os.getenv('API_V1_PREFIX', '/api/v1')
+    ENVIRONMENT: str = os.getenv('ENVIRONMENT', 'development').lower()
 
     # Security & JWT (Chave criptográfica gerada dinamicamente ou lida do .env)
     JWT_SECRET_KEY: str = _get_or_generate_jwt_secret()
@@ -47,18 +55,18 @@ class Settings:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES', str(60 * 24 * 7)))
 
     # Primary Database: PostgreSQL (Arquitetura e Conexão)
-    DATABASE_URL: str = os.getenv('DATABASE_URL', '')
-    POSTGRES_PORT: int = int(os.getenv('POSTGRES_PORT', '5438'))
-    POSTGRES_DB: str = os.getenv('POSTGRES_DB', 'pardal_promohub')
-    POSTGRES_USER: str = os.getenv('POSTGRES_USER', 'pardal_user')
+    _default_db = 'pardal_flow' if os.getenv('ENVIRONMENT', 'development').lower() == 'production' else 'pardal_flow_dev'
+    POSTGRES_HOST: str = os.getenv('POSTGRES_HOST', 'localhost')
+    POSTGRES_PORT: int = int(os.getenv('POSTGRES_PORT', '5432'))
+    POSTGRES_DB: str = os.getenv('POSTGRES_DB', _default_db)
+    POSTGRES_USER: str = os.getenv('POSTGRES_USER', 'postgres')
     POSTGRES_PASSWORD: str = os.getenv('POSTGRES_PASSWORD', '')
+    DATABASE_URL: str = os.getenv(
+        'DATABASE_URL',
+        f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+    )
 
-    # Webhook Integrations de Arquitetura (n8n / Microserviços opcionais de infraestrutura)
-    ML_WEBHOOK_URL: str = os.getenv('N8N_MERCADOLIVRE_WEBHOOK', '')
-    AMAZON_WEBHOOK_URL: str = os.getenv('N8N_AMAZON_WEBHOOK', '')
-    MAGALU_WEBHOOK_URL: str = os.getenv('N8N_MAGALU_WEBHOOK', '')
-    WPP_IMAGE_WEBHOOK: str = os.getenv('WPP_IMAGE_WEBHOOK', '')
-    WPP_TEXT_WEBHOOK: str = os.getenv('WPP_TEXT_WEBHOOK', '')
+    # Analytics e Monitoramento
     ANALYTICS_API_BASE_URL: str = os.getenv('ANALYTICS_API_BASE_URL', os.getenv('ANALYTICS_API_URL', ''))
 
 settings = Settings()

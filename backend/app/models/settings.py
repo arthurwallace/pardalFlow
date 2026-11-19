@@ -67,6 +67,18 @@ class SettingsBase(BaseModel):
     regex_amazon: str = DEFAULT_REGEX_AMAZON
     regex_magalu: str = DEFAULT_REGEX_MAGALU
 
+    # Integrations & Native Automation Configs (Padrões limpos e privados por usuário)
+    waha_base_url: str = "http://192.168.1.25:3000"
+    waha_api_key: Optional[str] = "6f1186b6522246c1b0015b9117d56d05"
+    amazon_tag: str = ""
+    magalu_store: str = ""
+    ml_tags: List[str] = []
+    telegram_bot_token: Optional[str] = None
+    telegram_admin_chat_id: Optional[str] = None
+    queue_delay_seconds: int = 15
+    auto_dispatch_enabled: bool = True
+    redis_url: Optional[str] = None
+
     # User environment credentials (optional per-user overrides)
     custom_telegram_api_id: Optional[str] = None
     custom_telegram_api_hash: Optional[str] = None
@@ -78,6 +90,7 @@ class SettingsBase(BaseModel):
     # Direct credentials mapped from the Settings UI per user
     shopee_app_id: Optional[str] = None
     shopee_app_secret: Optional[str] = None
+    shopee_subid: Optional[str] = None
     openrouter_api_key: Optional[str] = None
     groq_api_key: Optional[str] = None
     google_api_key: Optional[str] = None
@@ -99,6 +112,16 @@ class SettingsUpdate(BaseModel):
     regex_mercado_livre: Optional[str] = None
     regex_amazon: Optional[str] = None
     regex_magalu: Optional[str] = None
+    waha_base_url: Optional[str] = None
+    waha_api_key: Optional[str] = None
+    amazon_tag: Optional[str] = None
+    magalu_store: Optional[str] = None
+    ml_tags: Optional[List[str]] = None
+    telegram_bot_token: Optional[str] = None
+    telegram_admin_chat_id: Optional[str] = None
+    queue_delay_seconds: Optional[int] = None
+    auto_dispatch_enabled: Optional[bool] = None
+    redis_url: Optional[str] = None
     custom_telegram_api_id: Optional[str] = None
     custom_telegram_api_hash: Optional[str] = None
     custom_telegram_session: Optional[str] = None
@@ -107,6 +130,7 @@ class SettingsUpdate(BaseModel):
     custom_openrouter_api_key: Optional[str] = None
     shopee_app_id: Optional[str] = None
     shopee_app_secret: Optional[str] = None
+    shopee_subid: Optional[str] = None
     openrouter_api_key: Optional[str] = None
     groq_api_key: Optional[str] = None
     google_api_key: Optional[str] = None

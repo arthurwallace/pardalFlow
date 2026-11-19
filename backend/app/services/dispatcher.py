@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional, Callable
 import httpx
 
 from app.core.config import settings
+from app.services.waha_client import WahaClient
 
 class DispatcherService:
     def __init__(
@@ -16,7 +17,11 @@ class DispatcherService:
         whatsapp_sessions: List[Dict[str, Any]],
         default_footer: str,
         whatsapp_admin_dest: Optional[str] = None,
-        whatsapp_send_errors: bool = True
+        whatsapp_send_errors: bool = True,
+        waha_base_url: Optional[str] = None,
+        waha_api_key: Optional[str] = None,
+        user_id: Optional[int] = None,
+        user_config: Optional[Dict[str, Any]] = None
     ):
         self.telegram_destinations = telegram_destinations or []
         self.whatsapp_groups = whatsapp_groups or []
@@ -24,6 +29,11 @@ class DispatcherService:
         self.default_footer = default_footer
         self.whatsapp_admin_dest = whatsapp_admin_dest
         self.whatsapp_send_errors = whatsapp_send_errors
+        self.waha_base_url = waha_base_url or "http://192.168.1.25:3000"
+        self.waha_api_key = waha_api_key or ""
+        self.waha = WahaClient(base_url=self.waha_base_url, api_key=self.waha_api_key)
+        self.user_id = user_id
+        self.user_config = user_config or {}
         self._session_cycle_index = 0
 
     @staticmethod
@@ -123,6 +133,7 @@ class DispatcherService:
         media_path: Optional[str],
         destination_id: str,
         group_footer_override: Optional[str] = None,
+        session_name_override: Optional[str] = None,
         log_func: Callable[[str], None] = print
     ) -> bool:
         """Sends message or media to a single WhatsApp group/admin destination."""
@@ -135,11 +146,7 @@ class DispatcherService:
         if footer and footer not in clean_text:
             clean_text = f"{clean_text.strip()}\n\n{footer}"
 
-        session_name = self._get_next_whatsapp_session()
-        headers = {
-            "session_name": session_name,
-            "Content-Type": "application/json"
-        }
+        session_name = session_name_override or self._get_next_whatsapp_session()
 
         # Encode image to base64 if present
         image_b64 = ""
@@ -156,32 +163,32 @@ class DispatcherService:
         if url_match:
             preview_url = url_match.group(0)
 
-        if image_b64:
-            url = settings.WPP_IMAGE_WEBHOOK
-            payload = {
-                "destination": destination_id,
-                "caption": clean_text,
-                "image_base64": image_b64,
-                "preview_url": preview_url,
-                "destino": destination_id
-            }
-        else:
-            url = settings.WPP_TEXT_WEBHOOK
-            payload = {
-                "destination": destination_id,
-                "text": clean_text,
-                "destino": destination_id
-            }
-
-        async with httpx.AsyncClient() as client:
-            try:
-                resp = await client.post(url, headers=headers, json=payload, timeout=45.0)
-                resp.raise_for_status()
-                log_func(f"✅ WhatsApp: Mensagem enviada para {destination_id} via '{session_name}'")
+        # Envio 100% Nativo via WAHA HTTP API Direto
+        try:
+            if image_b64:
+                waha_ok = await self.waha.send_image(
+                    session_name=session_name,
+                    chat_id=destination_id,
+                    caption=clean_text,
+                    image_base64=image_b64,
+                    simulate_typing=True
+                )
+            else:
+                waha_ok = await self.waha.send_text(
+                    session_name=session_name,
+                    chat_id=destination_id,
+                    text=clean_text,
+                    simulate_typing=True
+                )
+            if waha_ok:
+                log_func(f"✅ WhatsApp [WAHA Nativo]: Mensagem enviada para {destination_id} via sessão '{session_name}'")
                 return True
-            except Exception as e:
-                log_func(f"❌ WhatsApp: Erro ao enviar para {destination_id}: {e}")
+            else:
+                log_func(f"❌ WhatsApp [WAHA]: Falha ao entregar para {destination_id} via sessão '{session_name}'")
                 return False
+        except Exception as ex_waha:
+            log_func(f"❌ WhatsApp [WAHA Erro]: {ex_waha}")
+            return False
 
     async def dispatch_whatsapp(
         self,
@@ -192,7 +199,7 @@ class DispatcherService:
         conversion_success: bool,
         log_func: Callable[[str], None] = print
     ):
-        """Dispatches WhatsApp messages based on conversion success and keyword rules."""
+        """Dispatches WhatsApp messages based on conversion success and keyword rules, applying group-specific affiliate tags if defined."""
         matched_dest_ids = self.get_matching_whatsapp_groups(original_text, configured_dest_ids)
 
         if conversion_success:
@@ -202,17 +209,43 @@ class DispatcherService:
 
             log_func(f"📲 WhatsApp: Enviando para {len(matched_dest_ids)} grupo(s)...")
             for gid in matched_dest_ids:
-                # Find group footer if defined
-                custom_footer = None
-                for grp in self.whatsapp_groups:
-                    if grp.get("id") == gid and grp.get("footer_text"):
-                        custom_footer = grp["footer_text"]
-                        break
+                grp = next((g for g in self.whatsapp_groups if g.get("id") == gid), None)
+                custom_footer = grp.get("footer_text") if grp else None
+                group_session = grp.get("session_name") if grp else None
+
+                # Verifica se o grupo possui tags de afiliados específicas
+                msg_to_send = formatted_text
+                has_custom_tags = grp and any([
+                    grp.get("ml_tag"),
+                    grp.get("shopee_subid"),
+                    grp.get("amazon_tag"),
+                    grp.get("magalu_store")
+                ])
+
+                if has_custom_tags and self.user_id:
+                    try:
+                        from app.services.link_converter import LinkConverterService
+                        converter = LinkConverterService(self.user_config, user_id=self.user_id)
+                        # Reconverte o texto especificamente com as tags exclusivas deste grupo
+                        reconverted_text, _ = await converter.convert_all_links(
+                            formatted_text,
+                            ml_tag=grp.get("ml_tag"),
+                            shopee_subid=grp.get("shopee_subid"),
+                            amazon_tag=grp.get("amazon_tag"),
+                            magalu_store=grp.get("magalu_store"),
+                            log_func=log_func
+                        )
+                        msg_to_send = reconverted_text
+                        log_func(f"🎯 Links adaptados com tags exclusivas do grupo '{grp.get('name', gid)}'")
+                    except Exception as ex_tag:
+                        log_func(f"⚠️ Erro ao aplicar tags específicas para grupo {gid}: {ex_tag}")
+
                 await self.send_to_whatsapp(
-                    formatted_text,
+                    msg_to_send,
                     media_path,
                     gid,
                     group_footer_override=custom_footer,
+                    session_name_override=group_session,
                     log_func=log_func
                 )
         else:

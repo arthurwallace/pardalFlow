@@ -1,10 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 import {
   Channel, WhatsAppGroup, TelegramDestination, WhatsAppSession,
-  Settings, DashboardMetrics, AnalyticsSummary, BotStatus, DispatchedOffersResponse, DispatchedOffer
+  Settings, DashboardMetrics, AnalyticsSummary, BotStatus, DispatchedOffersResponse, DispatchedOffer,
+  QueueCounts, QueueItem
 } from '../models';
 
 function resolveApiBase(): string {
@@ -23,7 +25,7 @@ function resolveApiBase(): string {
 export class ApiService {
   private base = resolveApiBase();
 
-  constructor(private http: HttpClient, private auth: AuthService) {}
+  constructor(private http: HttpClient, private auth: AuthService) { }
 
   private headers(): HttpHeaders {
     const token = this.auth.getToken();
@@ -252,5 +254,181 @@ export class ApiService {
     return this.http.post<any>(`${this.base}/backup/import`, formData, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
+  }
+
+  // --- Cookies & Sessões de Plataformas ---
+  getCookies(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/cookies`, { headers: this.headers() });
+  }
+
+  saveCookie(platform: string, cookies: string, extra_data?: any): Observable<any> {
+    return this.http.post<any>(`${this.base}/cookies/${platform}`, { cookies, extra_data }, { headers: this.headers() });
+  }
+
+  // --- WAHA & WhatsApp Direto ---
+  getWahaSessions(): Observable<any> {
+    return this.http.get<any>(`${this.base}/waha/sessions`, { headers: this.headers() });
+  }
+
+  createWahaSession(name: string, start = true): Observable<any> {
+    return this.http.post<any>(`${this.base}/waha/sessions`, { name, start }, { headers: this.headers() });
+  }
+
+  startWahaSession(sessionName: string): Observable<any> {
+    return this.http.post<any>(`${this.base}/waha/sessions/${sessionName}/start`, {}, { headers: this.headers() });
+  }
+
+  stopWahaSession(sessionName: string): Observable<any> {
+    return this.http.post<any>(`${this.base}/waha/sessions/${sessionName}/stop`, {}, { headers: this.headers() });
+  }
+
+  restartWahaSession(sessionName: string): Observable<any> {
+    return this.http.post<any>(`${this.base}/waha/sessions/${sessionName}/restart`, {}, { headers: this.headers() });
+  }
+
+  logoutWahaSession(sessionName: string): Observable<any> {
+    return this.http.post<any>(`${this.base}/waha/sessions/${sessionName}/logout`, {}, { headers: this.headers() });
+  }
+
+  getWahaSessionQr(sessionName: string): Observable<any> {
+    return this.http.get<any>(`${this.base}/waha/sessions/${sessionName}/qr`, { headers: this.headers() });
+  }
+
+  getWahaGroups(sessionName?: string): Observable<any> {
+    const url = sessionName ? `${this.base}/waha/groups?session_name=${sessionName}` : `${this.base}/waha/groups`;
+    return this.http.get<any>(url, { headers: this.headers() });
+  }
+
+  importWahaGroup(data: {
+    session_name?: string;
+    group_id: string;
+    name: string;
+    action?: string;
+    group_type?: string;
+    ml_tag?: string;
+    shopee_subid?: string;
+    amazon_tag?: string;
+    magalu_store?: string;
+    footer_text?: string;
+  }): Observable<any> {
+    const payload = {
+      ...data,
+      session_name: data.session_name || 'default',
+      action: data.action || data.group_type || 'destination'
+    };
+    return this.http.post<any>(`${this.base}/waha/groups/import`, payload, { headers: this.headers() });
+  }
+
+  broadcastToGroups(payload: {
+    session_name?: string;
+    templates: string[];
+    min_participants?: number;
+    ignore_announce_only?: boolean;
+    mention_all?: boolean;
+    delay_between_groups?: number;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.base}/waha/broadcast`, payload, { headers: this.headers() });
+  }
+
+  wahaBroadcast(payload: any): Observable<any> {
+    if (payload.text) {
+      // Disparo em massa simplificado com texto/imagem direto para destinos
+      return this.http.post<any>(`${this.base}/waha/broadcast-direct`, payload, { headers: this.headers() });
+    }
+    return this.broadcastToGroups({
+      session_name: payload.session || payload.session_name,
+      templates: payload.templates || [],
+      min_participants: payload.min_participants,
+      delay_between_groups: payload.delay_seconds || payload.delay_between_groups,
+      ignore_announce_only: payload.ignore_announce ?? payload.ignore_announce_only,
+      mention_all: payload.mention_all
+    });
+  }
+
+  // --- Fila de Mensagens ---
+  getQueueStatus(queueType?: string, status = 'pending', limit = 50): Observable<any> {
+    let url = `${this.base}/queue?status=${status}&limit=${limit}`;
+    if (queueType) url += `&queue_type=${queueType}`;
+    return this.http.get<any>(url, { headers: this.headers() });
+  }
+
+  getQueueCounts(): Observable<QueueCounts> {
+    return this.http.get<any>(`${this.base}/queue`, { headers: this.headers() }).pipe(
+      map(res => res.counts || { total: 0, ofertas: 0, cupons: 0, broadcast: 0 })
+    );
+  }
+
+  getQueueItems(limit = 30, queueType?: string): Observable<QueueItem[]> {
+    let url = `${this.base}/queue?limit=${limit}`;
+    if (queueType) url += `&queue_type=${queueType}`;
+    return this.http.get<any>(url, { headers: this.headers() }).pipe(
+      map(res => res.items || [])
+    );
+  }
+
+  clearQueue(queueType?: string): Observable<any> {
+    const url = queueType ? `${this.base}/queue/clear?queue_type=${queueType}` : `${this.base}/queue/clear`;
+    return this.http.post<any>(url, {}, { headers: this.headers() });
+  }
+
+  dispatchNextQueue(queueType = 'ofertas'): Observable<any> {
+    return this.http.post<any>(`${this.base}/queue/dispatch-next?queue_type=${queueType}`, {}, { headers: this.headers() });
+  }
+
+  dispatchNextQueueItem(queueType = 'ofertas'): Observable<any> {
+    return this.dispatchNextQueue(queueType);
+  }
+
+  trimQueue(keepLast = 20, queueType = 'ofertas'): Observable<any> {
+    return this.http.post<any>(`${this.base}/queue/trim?keep_last=${keepLast}&queue_type=${queueType}`, {}, { headers: this.headers() });
+  }
+
+  // --- Vitrine & Catálogo ---
+  getVitrine(category?: string, status?: string): Observable<any> {
+    let url = `${this.base}/vitrine`;
+    const params: string[] = [];
+    if (category) params.push(`category=${category}`);
+    if (status) params.push(`status=${status}`);
+    if (params.length) url += `?${params.join('&')}`;
+    return this.http.get<any>(url, { headers: this.headers() });
+  }
+
+  createVitrineProduct(product: any): Observable<any> {
+    return this.http.post<any>(`${this.base}/vitrine`, product, { headers: this.headers() });
+  }
+
+  searchAndImportShopee(keyword: string, category = 'noivas', limit = 15): Observable<any> {
+    return this.http.post<any>(`${this.base}/vitrine/search-shopee`, { keyword, category, limit }, { headers: this.headers() });
+  }
+
+  pauseAllVitrine(category?: string): Observable<any> {
+    const url = category ? `${this.base}/vitrine/pause-all?category=${category}` : `${this.base}/vitrine/pause-all`;
+    return this.http.post<any>(url, {}, { headers: this.headers() });
+  }
+
+  clearVitrine(category?: string): Observable<any> {
+    const url = category ? `${this.base}/vitrine/clear?category=${category}` : `${this.base}/vitrine/clear`;
+    return this.http.post<any>(url, {}, { headers: this.headers() });
+  }
+
+  generateVitrineOffers(category = 'noivas', limit = 5): Observable<any> {
+    return this.http.post<any>(`${this.base}/vitrine/generate-offers?category=${category}&limit=${limit}`, {}, { headers: this.headers() });
+  }
+
+  // --- Relatórios & Afiliados ---
+  getShopeeClicks(daysBack = 1): Observable<any> {
+    return this.http.get<any>(`${this.base}/reports/shopee/clicks?days_back=${daysBack}`, { headers: this.headers() });
+  }
+
+  getShopeeCommissions(): Observable<any> {
+    return this.http.get<any>(`${this.base}/reports/shopee/commissions`, { headers: this.headers() });
+  }
+
+  getMercadoLivreSales(): Observable<any> {
+    return this.http.get<any>(`${this.base}/reports/mercadolivre/sales`, { headers: this.headers() });
+  }
+
+  getGroupEventsSummary(days = 7): Observable<any> {
+    return this.http.get<any>(`${this.base}/reports/group-events?days=${days}`, { headers: this.headers() });
   }
 }

@@ -74,21 +74,37 @@ async def get_group_analytics(
     if cached_entry and (now_ts - cached_entry[0]) < 60:
         raw_data = cached_entry[1]
     else:
-        base_url = (getattr(settings, "ANALYTICS_API_BASE_URL", "") or "https://n8n.arthurwallace.com.br/webhook/csv_monitoramento_entradas_saidas_grupos").rstrip("/")
-        url = f"{base_url}/{slug}"
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(url, timeout=15.0)
-                if resp.status_code == 200:
-                    raw_data = resp.json()
-                    _cache_by_group[slug] = (now_ts, raw_data)
+        base_url = (getattr(settings, "ANALYTICS_API_BASE_URL", "") or "").rstrip("/")
+        if base_url:
+            url = f"{base_url}/{slug}"
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.get(url, timeout=15.0)
+                    if resp.status_code == 200:
+                        raw_data = resp.json()
+                        _cache_by_group[slug] = (now_ts, raw_data)
+                    else:
+                        raw_data = []
+            except Exception as e:
+                if cached_entry:
+                    raw_data = cached_entry[1]
                 else:
                     raw_data = []
-        except Exception as e:
-            if cached_entry:
-                raw_data = cached_entry[1]
-            else:
-                raw_data = []
+        else:
+            # Consulta nativa e privada no banco de dados isolado do usuário atual
+            from app.core.database import get_db
+            db = get_db()
+            raw_data = []
+            if db:
+                events = list(db.group_events.find({"user_id": current_user["id"]}))
+                for ev in events:
+                    g_identifier = (ev.get("group_name") or ev.get("group_id") or "").lower()
+                    if slug in g_identifier or slug == "all":
+                        raw_data.append({
+                            "participant_id": ev.get("participant", ""),
+                            "event": "entrada" if ev.get("event_type") == "join" else "saida",
+                            "date": ev.get("timestamp").isoformat() if ev.get("timestamp") else datetime.now(timezone.utc).isoformat()
+                        })
 
     if not raw_data:
         return AnalyticsSummary(

@@ -1,0 +1,603 @@
+<div class="whatsapp-container">
+  <!-- HEADER -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="header-badge">
+        <span class="badge-dot"></span>
+        CENTRAL NATIVA WHATSAPP
+      </div>
+      <h1 class="page-title">Central & Conexões WhatsApp</h1>
+      <p class="page-subtitle">
+        Gerencie instâncias WAHA, monitore grupos, configure tags de afiliados exclusivas por grupo e opere espelhamentos nativos sem intermediários.
+      </p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="loadAllData()" [disabled]="loading">
+        <svg class="btn-icon" [class.spin]="loading" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+          <path d="M16 21h5v-5"/>
+        </svg>
+        Sincronizar Tudo
+      </button>
+      <button class="btn btn-primary" (click)="openNewSessionModal()">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Nova Sessão (QR Code)
+      </button>
+    </div>
+  </header>
+
+  <!-- ALERT MESSAGE -->
+  <div *ngIf="alertMessage" class="alert-banner" [ngClass]="alertType">
+    <span>{{ alertMessage }}</span>
+    <button class="alert-close" (click)="alertMessage = null">×</button>
+  </div>
+
+  <!-- MAIN TABS NAVIGATION -->
+  <nav class="hub-tabs">
+    <button class="hub-tab-btn" [class.active]="activeTab === 'sessions'" (click)="activeTab = 'sessions'">
+      <svg class="hub-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+        <line x1="12" y1="18" x2="12.01" y2="18"/>
+      </svg>
+      Instâncias & Sessões (Chips)
+      <span class="tab-count">{{ sessions.length }}</span>
+    </button>
+
+    <button class="hub-tab-btn" [class.active]="activeTab === 'explorer'" (click)="activeTab = 'explorer'">
+      <svg class="hub-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      Explorador de Grupos no Aparelho
+      <span class="tab-count">{{ deviceGroups.length }}</span>
+    </button>
+
+    <button class="hub-tab-btn" [class.active]="activeTab === 'destinations'" (click)="activeTab = 'destinations'">
+      <svg class="hub-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      Grupos de Destino & Tags de Afiliados
+      <span class="tab-count">{{ destinationGroups.length }}</span>
+    </button>
+
+    <button class="hub-tab-btn" [class.active]="activeTab === 'mirroring'" (click)="activeTab = 'mirroring'">
+      <svg class="hub-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="17 1 21 5 17 9"/>
+        <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+        <polyline points="7 23 3 19 7 15"/>
+        <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+      </svg>
+      Central de Espelhamento
+      <span class="tab-count">{{ monitoredGroups.length }}</span>
+    </button>
+
+    <button class="hub-tab-btn" [class.active]="activeTab === 'queue'" (click)="activeTab = 'queue'">
+      <svg class="hub-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="8" y1="6" x2="21" y2="6"/>
+        <line x1="8" y1="12" x2="21" y2="12"/>
+        <line x1="8" y1="18" x2="21" y2="18"/>
+        <line x1="3" y1="6" x2="3.01" y2="6"/>
+        <line x1="3" y1="12" x2="3.01" y2="12"/>
+        <line x1="3" y1="18" x2="3.01" y2="18"/>
+      </svg>
+      Fila Anti-Spam & Broadcast
+      <span class="tab-count">{{ queueCountTotal }}</span>
+    </button>
+  </nav>
+
+  <!-- ========================================== -->
+  <!-- TAB 1: SESSÕES / CHIPS (WAHA)              -->
+  <!-- ========================================== -->
+  <section *ngIf="activeTab === 'sessions'" class="tab-content">
+    <div class="section-intro">
+      <div>
+        <h2 class="section-title">Instâncias WhatsApp (WAHA)</h2>
+        <p class="section-desc">Conexões ativas no motor WAHA. Monitore bateria, reconecte e visualize QR codes em tempo real.</p>
+      </div>
+    </div>
+
+    <div class="cards-grid">
+      <div *ngFor="let s of sessions" class="session-card" [class.card-working]="s.status === 'WORKING'" [class.card-error]="s.status === 'FAILED' || s.status === 'STOPPED'">
+        <div class="card-header">
+          <div class="session-title-box">
+            <span class="session-name">{{ s.name }}</span>
+            <span class="session-phone">{{ s.phone || 'Sem número detectado' }}</span>
+          </div>
+          <span class="status-pill" [ngClass]="s.status?.toLowerCase()">
+            <span class="pill-dot"></span>
+            {{ s.status }}
+          </span>
+        </div>
+
+        <div class="card-body">
+          <div class="meta-row">
+            <span class="meta-label">Dispositivo / Motor:</span>
+            <span class="meta-val">{{ s.engine || 'NOWEB' }}</span>
+          </div>
+          <div class="meta-row" *ngIf="s.battery !== undefined">
+            <span class="meta-label">Bateria:</span>
+            <span class="meta-val">{{ s.battery }}%</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Destinos vinculados:</span>
+            <span class="meta-val highlight">{{ getGroupsCountBySession(s.name) }} grupos</span>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <button *ngIf="s.status === 'SCAN_QR_CODE' || s.status === 'STARTING'" class="btn-sm btn-primary" (click)="openQrModal(s.name)">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Ver QR Code
+          </button>
+
+          <button *ngIf="s.status === 'WORKING'" class="btn-sm btn-outline" (click)="restartSession(s.name)">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Reiniciar
+          </button>
+
+          <button *ngIf="s.status === 'STOPPED' || s.status === 'FAILED'" class="btn-sm btn-warning" (click)="startSession(s.name)">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Iniciar
+          </button>
+
+          <button *ngIf="s.status === 'WORKING'" class="btn-sm btn-outline-danger" (click)="stopSession(s.name)">
+            Pausar
+          </button>
+
+          <button class="btn-sm btn-danger" (click)="logoutSession(s.name)" title="Desconectar e Excluir Sessão">
+            Desconectar
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="sessions.length === 0 && !loading" class="empty-placeholder">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+          <line x1="12" y1="18" x2="12.01" y2="18"/>
+        </svg>
+        <h3>Nenhum Chip Conectado no WAHA</h3>
+        <p>Conecte um aparelho lendo o QR Code ou verifique se o servidor WAHA está rodando e configurado com o IP correto.</p>
+        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 14px;">
+          <button class="btn btn-primary" (click)="openNewSessionModal()">Cadastrar Chip via QR Code</button>
+          <a routerLink="/settings" [queryParams]="{tab: 'credentials'}" class="btn btn-secondary">Ver Configurações de API & WAHA</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- TAB 2: EXPLORADOR DE GRUPOS DO APARELHO    -->
+  <!-- ========================================== -->
+  <section *ngIf="activeTab === 'explorer'" class="tab-content">
+    <div class="section-intro">
+      <div>
+        <h2 class="section-title">Explorador de Grupos do Aparelho Conectado</h2>
+        <p class="section-desc">Consulte em tempo real todos os grupos que o chip faz parte e transforme-os em grupos de envio ou canais monitorados.</p>
+      </div>
+      <div class="search-box" style="display: flex; gap: 10px; align-items: center;">
+        <select class="form-control form-control-sm" style="max-width: 200px;" [(ngModel)]="explorerSession" (change)="loadDeviceGroups(explorerSession)">
+          <option *ngFor="let s of sessions" [value]="s.name">{{ s.name }} ({{ s.status }})</option>
+          <option *ngIf="sessions.length === 0" value="default">default</option>
+        </select>
+        <input type="text" [(ngModel)]="explorerFilter" placeholder="Filtrar grupos pelo nome ou JID..." class="form-control form-control-sm" />
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nome do Grupo</th>
+            <th>JID (WhatsApp ID)</th>
+            <th>Participantes</th>
+            <th>Papel do Bot</th>
+            <th>Status na Plataforma</th>
+            <th class="text-right">Ação Rápida</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let g of filteredExplorerGroups">
+            <td>
+              <div class="group-cell">
+                <span class="group-name">{{ g.name || 'Grupo sem nome' }}</span>
+              </div>
+            </td>
+            <td><code class="jid-code">{{ g.id }}</code></td>
+            <td>{{ g.participants_count || '-' }} pessoas</td>
+            <td>
+              <span class="role-badge" [class.admin]="g.is_admin">
+                {{ g.is_admin ? 'ADMIN' : 'Membro' }}
+              </span>
+            </td>
+            <td>
+              <span *ngIf="g.is_destination" class="status-pill working">DESTINO</span>
+              <span *ngIf="g.is_monitored" class="status-pill starting">MONITORADO</span>
+              <span *ngIf="!g.is_destination && !g.is_monitored" class="status-pill stopped">NÃO IMPORTADO</span>
+            </td>
+            <td class="text-right">
+              <div class="btn-group-sm">
+                <button class="btn-sm btn-outline" [disabled]="g.is_destination" (click)="importAsDestination(g)">
+                  {{ g.is_destination ? 'Já é Destino' : '+ Destino' }}
+                </button>
+                <button class="btn-sm btn-outline" [disabled]="g.is_monitored" (click)="importAsMonitored(g)">
+                  {{ g.is_monitored ? 'Já Monitorado' : '+ Monitorar' }}
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="filteredExplorerGroups.length === 0">
+            <td colspan="6" class="text-center py-4 text-muted">Nenhum grupo correspondente ao filtro.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- TAB 3: GRUPOS DE DESTINO & TAGS AFILIADO   -->
+  <!-- ========================================== -->
+  <section *ngIf="activeTab === 'destinations'" class="tab-content">
+    <div class="section-intro">
+      <div>
+        <h2 class="section-title">Grupos de Destino & Tags de Afiliados</h2>
+        <p class="section-desc">
+          Cada grupo possui suas próprias tags exclusivas de Mercado Livre, Shopee, Amazon e Magalu. Links enviados a este grupo serão convertidos estritamente com as tags abaixo.
+        </p>
+      </div>
+      <button class="btn btn-primary" (click)="openEditGroupModal(null)">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar Grupo Destino
+      </button>
+    </div>
+
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Grupo / Destino</th>
+            <th>Sessão WAHA</th>
+            <th>Shopee SubID</th>
+            <th>Mercado Livre Tag</th>
+            <th>Amazon Tag</th>
+            <th>Magalu Loja</th>
+            <th>Status</th>
+            <th class="text-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let dg of destinationGroups">
+            <td>
+              <div class="dest-info">
+                <span class="dest-title">{{ dg.name }}</span>
+                <span class="dest-jid">{{ dg.group_id || dg.id }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="chip-badge">{{ dg.session_name || 'default' }}</span>
+            </td>
+            <td>
+              <span class="tag-pill tag-shopee">{{ dg.shopee_subid || 'Não configurado' }}</span>
+            </td>
+            <td>
+              <span class="tag-pill tag-ml">{{ dg.ml_tag || 'Não configurado' }}</span>
+            </td>
+            <td>
+              <span class="tag-pill tag-amazon">{{ dg.amazon_tag || 'Não configurado' }}</span>
+            </td>
+            <td>
+              <span class="tag-pill tag-magalu">{{ dg.magalu_store || 'Não configurado' }}</span>
+            </td>
+            <td>
+              <label class="switch">
+                <input type="checkbox" [ngModel]="dg.is_active !== false && dg.active !== false" (ngModelChange)="dg.is_active = $event; dg.active = $event" (change)="toggleGroupActive(dg)" />
+                <span class="slider round"></span>
+              </label>
+            </td>
+            <td class="text-right">
+              <div class="btn-group-sm">
+                <button class="btn-sm btn-outline" (click)="openEditGroupModal(dg)" title="Editar Tags e Configurações">
+                  Editar
+                </button>
+                <button class="btn-sm btn-outline-danger" (click)="deleteGroup(dg)" title="Remover dos Destinos">
+                  Excluir
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="destinationGroups.length === 0">
+            <td colspan="8" class="text-center py-4 text-muted">
+              Nenhum grupo de destino configurado. Importe grupos na aba "Explorador de Grupos" ou clique em "Adicionar Grupo Destino".
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- TAB 4: CENTRAL DE ESPELHAMENTO             -->
+  <!-- ========================================== -->
+  <section *ngIf="activeTab === 'mirroring'" class="tab-content">
+    <div class="section-intro">
+      <div>
+        <h2 class="section-title">Central de Espelhamento (WhatsApp / Telegram)</h2>
+        <p class="section-desc">
+          Espelhe promoções de canais concorrentes do WhatsApp ou canais do Telegram diretamente para os seus grupos de destino com conversão automática das suas tags.
+        </p>
+      </div>
+      <button class="btn btn-primary" (click)="openNewMirrorModal()">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Novo Espelhamento
+      </button>
+    </div>
+
+    <div class="mirror-cards-grid">
+      <div *ngFor="let mg of monitoredGroups" class="mirror-card">
+        <div class="mirror-header">
+          <div class="source-info">
+            <span class="source-type">ORIGEM: WHATSAPP</span>
+            <h3 class="source-name">{{ mg.name }}</h3>
+            <code class="source-jid">{{ mg.group_id || mg.id }}</code>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [ngModel]="mg.is_active !== false && mg.active !== false" (ngModelChange)="mg.is_active = $event; mg.active = $event" (change)="toggleGroupActive(mg)" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div class="mirror-flow">
+          <div class="flow-step">
+            <span class="flow-label">1. Detecção</span>
+            <span class="flow-val">Webhook WAHA (Ao chegar mensagem)</span>
+          </div>
+          <div class="flow-arrow">➔</div>
+          <div class="flow-step">
+            <span class="flow-label">2. Conversão Nativa</span>
+            <span class="flow-val">Aplica Tags exclusivas do Destino</span>
+          </div>
+          <div class="flow-arrow">➔</div>
+          <div class="flow-step">
+            <span class="flow-label">3. Envio</span>
+            <span class="flow-val highlight">{{ getMirrorTargetCount(mg) }} Destinos Configurados</span>
+          </div>
+        </div>
+
+        <div class="mirror-footer">
+          <button class="btn-sm btn-outline" (click)="openEditGroupModal(mg)">Configurar Destinos do Espelho</button>
+          <button class="btn-sm btn-outline-danger" (click)="deleteGroup(mg)">Remover Monitoramento</button>
+        </div>
+      </div>
+
+      <div *ngIf="monitoredGroups.length === 0" class="empty-placeholder">
+        <h3>Nenhum grupo de WhatsApp monitorado</h3>
+        <p>Selecione um grupo no Explorador ou cadastre um grupo de ofertas para espelhar automaticamente.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- TAB 5: FILA DE ENVIOS & BROADCAST          -->
+  <!-- ========================================== -->
+  <section *ngIf="activeTab === 'queue'" class="tab-content">
+    <div class="section-intro">
+      <div>
+        <h2 class="section-title">Fila Anti-Spam & Disparo em Massa</h2>
+        <p class="section-desc">Controle a vazão de mensagens para proteger os chips de banimento. Monitore e despache ofertas pendentes.</p>
+      </div>
+      <div class="btn-group-sm">
+        <button class="btn btn-secondary" (click)="dispatchQueueItem()" [disabled]="queueItems.length === 0">
+          Despachar Próximo
+        </button>
+        <button class="btn btn-outline-danger" (click)="trimQueueItems()" [disabled]="queueItems.length === 0">
+          Limpar / Podar Fila
+        </button>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="stat-val">{{ queueCounts?.ofertas || 0 }}</span>
+        <span class="stat-label">Ofertas Pendentes</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val">{{ queueCounts?.notificacoes || 0 }}</span>
+        <span class="stat-label">Notificações / Churn</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val">{{ queueCounts?.total || 0 }}</span>
+        <span class="stat-label">Total em Fila Redis</span>
+      </div>
+    </div>
+
+    <!-- BROADCAST FORM -->
+    <div class="broadcast-box">
+      <h3 class="box-title">Disparo em Massa para Grupos Selecionados</h3>
+      <div class="form-grid">
+        <div class="form-group col-12">
+          <label>Mensagem / Texto Promocional:</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="broadcastText" placeholder="Digite o comunicado ou promoção. Links de afiliados serão mantidos."></textarea>
+        </div>
+        <div class="form-group col-8">
+          <label>URL de Imagem (Opcional):</label>
+          <input type="text" class="form-control" [(ngModel)]="broadcastImageUrl" placeholder="https://exemplo.com/foto.jpg" />
+        </div>
+        <div class="form-group col-4">
+          <label>Instância Emissora:</label>
+          <select class="form-control" [(ngModel)]="broadcastSession">
+            <option value="default">default (Padrão)</option>
+            <option *ngFor="let s of sessions" [value]="s.name">{{ s.name }} ({{ s.phone || 'Chip' }})</option>
+          </select>
+        </div>
+      </div>
+      <div class="box-actions">
+        <button class="btn btn-primary" (click)="sendBroadcast()" [disabled]="!broadcastText">
+          Disparar Mensagem para {{ destinationGroups.length }} Grupos de Destino
+        </button>
+      </div>
+    </div>
+
+    <!-- QUEUE ITEMS TABLE -->
+    <div class="table-container mt-4">
+      <h4 class="sub-table-title">Itens Pendentes na Fila</h4>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tipo</th>
+            <th>Texto / Conteúdo</th>
+            <th>Tentativas</th>
+            <th>Destino</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let it of queueItems">
+            <td><code>{{ it.id }}</code></td>
+            <td><span class="badge badge-info">{{ it.type }}</span></td>
+            <td class="queue-text-cell">{{ it.payload?.text?.slice(0, 100) }}...</td>
+            <td>{{ it.attempts || 0 }}</td>
+            <td>{{ it.payload?.chat_id || 'Broadcast' }}</td>
+          </tr>
+          <tr *ngIf="queueItems.length === 0">
+            <td colspan="5" class="text-center py-4 text-muted">Fila vazia no momento. Mensagens são processadas em tempo real.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- MODAL: QR CODE                             -->
+  <!-- ========================================== -->
+  <div *ngIf="qrModalOpen" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Conectar Chip via QR Code</h3>
+        <button class="close-btn" (click)="closeQrModal()">×</button>
+      </div>
+      <div class="modal-body text-center">
+        <p class="text-muted">Abra o WhatsApp no celular > Aparelhos Conectados > Conectar Aparelho e aponte para a tela:</p>
+        <div class="qr-code-wrapper" *ngIf="qrCodeBase64">
+          <img [src]="qrCodeBase64" alt="QR Code WhatsApp" class="qr-image" />
+        </div>
+        <div *ngIf="!qrCodeBase64" class="qr-loading">
+          <div class="spinner"></div>
+          <span>Carregando QR Code de {{ activeQrSession }}...</span>
+        </div>
+        <p class="session-status-text">Status: <strong>{{ activeQrStatus }}</strong></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeQrModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: EDITAR / CRIAR GRUPO                -->
+  <!-- ========================================== -->
+  <div *ngIf="groupModalOpen" class="modal-backdrop">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3>{{ selectedGroup?.id ? 'Configurar Grupo e Tags' : 'Novo Grupo de Destino' }}</h3>
+        <button class="close-btn" (click)="groupModalOpen = false">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group col-6">
+            <label>Nome do Grupo:</label>
+            <input type="text" class="form-control" [(ngModel)]="groupForm.name" placeholder="Ex: Melhores Promoções VIP" />
+          </div>
+          <div class="form-group col-6">
+            <label>JID do WhatsApp (Chat ID):</label>
+            <input type="text" class="form-control" [(ngModel)]="groupForm.group_id" placeholder="12036304...&#64;g.us" />
+          </div>
+
+          <div class="form-group col-6">
+            <label>Instância Emissora (WAHA):</label>
+            <select class="form-control" [(ngModel)]="groupForm.session_name">
+              <option value="default">default</option>
+              <option *ngFor="let s of sessions" [value]="s.name">{{ s.name }}</option>
+            </select>
+          </div>
+
+          <div class="form-group col-6">
+            <label>Tipo de Grupo:</label>
+            <select class="form-control" [(ngModel)]="groupForm.group_type">
+              <option value="destination">Destino de Ofertas</option>
+              <option value="monitored">Monitorado (Origem)</option>
+            </select>
+          </div>
+
+          <div class="form-divider col-12">
+            <span>TAGS EXCLUSIVAS DE AFILIADOS DESTE GRUPO</span>
+          </div>
+
+          <div class="form-group col-6">
+            <label>Shopee SubID:</label>
+            <input type="text" class="form-control" [(ngModel)]="groupForm.shopee_subid" placeholder="Ex: grupo01vip" />
+            <small class="form-hint">Rastreamento exclusivo de cliques deste grupo na Shopee.</small>
+          </div>
+
+          <div class="form-group col-6">
+            <label>Mercado Livre Tag:</label>
+            <input type="text" class="form-control" [(ngModel)]="groupForm.ml_tag" placeholder="Ex: grupo01ml" />
+            <small class="form-hint">Tag anexada aos links do Mercado Livre.</small>
+          </div>
+
+          <div class="form-group col-6">
+            <label>Amazon Tag:</label>
+            <input type="text" class="form-control" [(ngModel)]="groupForm.amazon_tag" placeholder="Ex: meugrupo-20" />
+            <small class="form-hint">Sua Associate Tag exclusiva para a Amazon.</small>
+          </div>
+
+          <div class="form-group col-6">
+            <label>Magalu ID de Loja:</label>
+            <input type="text" class="form-control" [(ngModel)]="groupForm.magalu_store" placeholder="Ex: magazinemeugrupo" />
+            <small class="form-hint">Identificador da loja Magazine Você.</small>
+          </div>
+
+          <div class="form-group col-12">
+            <label>Rodapé Personalizado do Grupo (Opcional):</label>
+            <input type="text" class="form-control" [(ngModel)]="groupForm.footer_text" placeholder="Ex: ⚡ Ofertas válidas por tempo limitado." />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="groupModalOpen = false">Cancelar</button>
+        <button class="btn btn-primary" (click)="saveGroup()">Salvar Configurações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: NOVA SESSÃO WAHA                    -->
+  <!-- ========================================== -->
+  <div *ngIf="newSessionModalOpen" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Cadastrar Nova Sessão (Chip)</h3>
+        <button class="close-btn" (click)="newSessionModalOpen = false">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Nome da Sessão (Ex: chip_vendas_02):</label>
+          <input type="text" class="form-control" [(ngModel)]="newSessionName" placeholder="chip_01" />
+          <small class="form-hint">Use letras minúsculas, números e sublinhados.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="newSessionModalOpen = false">Cancelar</button>
+        <button class="btn btn-primary" (click)="createSession()" [disabled]="!newSessionName">Criar e Gerar QR Code</button>
+      </div>
+    </div>
+  </div>
+</div>

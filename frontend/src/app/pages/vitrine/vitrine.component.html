@@ -1,0 +1,166 @@
+﻿    <div class="vitrine-page">
+      <!-- HEADER -->
+      <div class="page-header">
+        <div>
+          <span class="category-tag">CATÁLOGOS & COMISSÕES</span>
+          <h1 class="main-title">Vitrine & <span class="highlight-text">Produtos Shopee</span></h1>
+          <p class="subtitle">
+            Gerencie o catálogo de produtos e vitrine automatizada (Módulo Noivas & Promoções).
+            Busque produtos com maiores comissões na Shopee e envie para a fila de disparo em 1 clique.
+          </p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary" (click)="loadProducts()" [disabled]="loading">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon" [class.spin]="loading">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+            <span>Atualizar</span>
+          </button>
+          <button class="btn btn-primary" (click)="openSearchModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <span>Buscar na Shopee</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- VITRINE ACTION BAR -->
+      <div class="card action-bar">
+        <div class="action-info">
+          <span class="stat-pill">Total: <strong>{{ products.length }}</strong> produtos</span>
+          <span class="stat-pill success">Ativos: <strong>{{ activeCount }}</strong></span>
+          <span class="stat-pill warning">Pausados: <strong>{{ pausedCount }}</strong></span>
+        </div>
+        <div class="action-buttons">
+          <button class="btn btn-teal" (click)="generateOffers()" [disabled]="activeCount === 0 || generating">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+            <span>{{ generating ? 'Gerando...' : 'Disparar Ofertas para a Fila' }}</span>
+          </button>
+          <button class="btn btn-secondary" (click)="pauseAll()" [disabled]="activeCount === 0">
+            <span>Pausar Todos</span>
+          </button>
+          <button class="btn btn-danger-outline" (click)="clearAll()" [disabled]="products.length === 0">
+            <span>Zerar Vitrine</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- PRODUCTS TABLE -->
+      <div class="card table-card">
+        <div *ngIf="loading" class="loading-state">
+          <span>Carregando vitrine de produtos...</span>
+        </div>
+
+        <div *ngIf="!loading && products.length === 0" class="empty-state">
+          <div class="empty-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-svg"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+          </div>
+          <h3>Vitrine Vazia</h3>
+          <p>Nenhum produto cadastrado. Clique em "Buscar na Shopee" para minerar itens com alta comissão.</p>
+        </div>
+
+        <div *ngIf="!loading && products.length > 0" class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Foto</th>
+                <th>Produto</th>
+                <th>Preço</th>
+                <th>Comissão (%)</th>
+                <th>Comissão (R$)</th>
+                <th>Categoria</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of products">
+                <td class="photo-cell">
+                  <img *ngIf="p.image_url" [src]="p.image_url" alt="" class="prod-thumb" />
+                  <div *ngIf="!p.image_url" class="no-thumb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pill-icon"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                  </div>
+                </td>
+                <td class="title-cell">
+                  <a [href]="p.affiliate_url || p.product_url" target="_blank" class="prod-link" title="Abrir link do produto">
+                    {{ p.title }}
+                  </a>
+                </td>
+                <td class="price-cell">R$ {{ p.price }}</td>
+                <td>
+                  <span class="badge badge-info">{{ p.commission_rate }}%</span>
+                </td>
+                <td class="commission-cell">
+                  <strong class="text-green">R$ {{ p.commission_value | number:'1.2-2' }}</strong>
+                </td>
+                <td>
+                  <span class="category-tag-pill">{{ p.category }}</span>
+                </td>
+                <td>
+                  <span [class]="p.status === 'active' ? 'badge badge-success' : 'badge badge-warning'">
+                    {{ p.status === 'active' ? 'Ativo' : 'Pausado' }}
+                  </span>
+                </td>
+                <td>
+                  <a [href]="p.affiliate_url" target="_blank" class="btn-sm-view" title="Ver Link Oficial">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SEARCH SHOPEE MODAL -->
+      <div *ngIf="showSearchModal" class="modal-backdrop">
+        <div class="modal card">
+          <div class="modal-header">
+            <h3>Buscar Produtos na Shopee por Comissão</h3>
+            <button class="btn-close" (click)="showSearchModal = false">✕</button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-desc">
+              Digite uma palavra-chave para buscar produtos no programa de afiliados da Shopee.
+              Os resultados são ordenados automaticamente pelas maiores comissões.
+            </p>
+            <div class="form-group">
+              <label>Palavra-chave:</label>
+              <input 
+                type="text" 
+                [(ngModel)]="searchKeyword" 
+                placeholder="Ex: lembrancinha casamento, vestido noiva, air fryer..."
+                class="form-control"
+                (keyup.enter)="executeSearch()"
+              />
+            </div>
+            <div class="form-group">
+              <label>Categoria de destino:</label>
+              <select [(ngModel)]="searchCategory" class="form-control">
+                <option value="noivas">Noivas & Casamento</option>
+                <option value="geral">Geral / Achadinhos</option>
+                <option value="casa">Casa & Cozinha</option>
+                <option value="eletronicos">Eletrônicos</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="showSearchModal = false">Cancelar</button>
+            <button class="btn btn-primary" (click)="executeSearch()" [disabled]="!searchKeyword.trim() || searching">
+              <span>{{ searching ? 'Buscando...' : 'Buscar e Importar' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOAST -->
+      <div *ngIf="toastMsg" class="toast" [class.toast-success]="toastSuccess" [class.toast-error]="!toastSuccess">
+        {{ toastMsg }}
+      </div>
+    </div>

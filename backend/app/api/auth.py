@@ -48,7 +48,13 @@ async def register(user_in: UserCreate):
             "message_template": DEFAULT_MESSAGE_TEMPLATE,
             "gemini_prompt": DEFAULT_GEMINI_PROMPT,
             "openrouter_model_1": "google/gemma-2-9b-it:free",
-            "openrouter_model_2": "meta-llama/llama-3-8b-instruct:free"
+            "openrouter_model_2": "meta-llama/llama-3-8b-instruct:free",
+            "shopee_app_id": "",
+            "shopee_app_secret": "",
+            "shopee_subid": "",
+            "amazon_tag": "",
+            "magalu_store": "",
+            "ml_tags": []
         }
     })
 

@@ -1,0 +1,774 @@
+﻿    <div class="destinations-page">
+      <!-- HEADER CATEGORY & TITLE -->
+      <div class="page-header">
+        <div>
+          <span class="category-tag">DESTINOS DE DISPARO</span>
+          <h1 class="main-title">Gerenciar <span class="highlight-text">destinos</span></h1>
+          <p class="subtitle">
+            Configure grupos de WhatsApp, sessões/chips conectados para rotatividade e canais de Telegram para onde suas ofertas serão encaminhadas.
+          </p>
+        </div>
+      </div>
+
+      <!-- TABS NAVIGATION -->
+      <div class="tabs-nav">
+        <button class="tab-btn" [class.active]="activeTab === 'whatsapp-groups'" (click)="setTab('whatsapp-groups')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+          <span>Grupos WhatsApp ({{ waGroups.length | number }})</span>
+        </button>
+
+        <button class="tab-btn" [class.active]="activeTab === 'whatsapp-sessions'" (click)="setTab('whatsapp-sessions')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+          <span>Sessões / Chips ({{ waSessions.length | number }})</span>
+        </button>
+
+        <button class="tab-btn" [class.active]="activeTab === 'telegram'" (click)="setTab('telegram')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          <span>Canais Telegram ({{ tgDestinations.length | number }})</span>
+        </button>
+
+        <button class="tab-btn" [class.active]="activeTab === 'queue'" (click)="setTab('queue')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span>Fila de Envios ({{ queueCounts.total }})</span>
+        </button>
+
+        <button class="tab-btn" [class.active]="activeTab === 'broadcast'" (click)="setTab('broadcast')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          <span>Disparo em Massa</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: GRUPOS DO WHATSAPP -->
+      <div *ngIf="activeTab === 'whatsapp-groups'" class="tab-content card">
+        <div class="content-header">
+          <div>
+            <h2>Grupos de Destino (WhatsApp)</h2>
+            <p class="content-sub">Grupos que recebem as promoções filtradas. Cada grupo pode ter um rodapé personalizado.</p>
+          </div>
+          <div class="header-actions-row">
+            <button class="btn btn-secondary" (click)="openGroupExplorer()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <span>Explorar Grupos do Celular</span>
+            </button>
+            <button class="btn btn-teal" (click)="openNewGroupModal()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Novo Grupo</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="cards-list">
+          <div *ngFor="let g of waGroups" class="dest-item-card">
+            <div class="dest-info">
+              <div class="dest-badge-row">
+                <span class="dest-name">{{ g.name }}</span>
+                <span [class]="g.active !== false ? 'badge badge-success' : 'badge badge-warning'">
+                  {{ g.active !== false ? 'Ativo' : 'Pausado' }}
+                </span>
+                <span *ngIf="g.is_monitored" class="badge badge-purple">Monitorado (Origem)</span>
+                <span *ngIf="!g.is_monitored" class="badge badge-info">Destino</span>
+                <span *ngIf="g.mirror_enabled" class="badge badge-cyan">Espelhamento Ativo</span>
+                <span *ngIf="g.session_name" class="badge badge-secondary">Chip: {{ g.session_name }}</span>
+              </div>
+              <span class="dest-id">{{ g.id }}</span>
+
+              <!-- Tags de Afiliados Exclusivas deste Grupo -->
+              <div *ngIf="g.ml_tag || g.shopee_subid || g.amazon_tag || g.magalu_store" class="group-tags-summary">
+                <span *ngIf="g.ml_tag" class="tag-pill tag-ml">ML: <strong>{{ g.ml_tag }}</strong></span>
+                <span *ngIf="g.shopee_subid" class="tag-pill tag-shopee">Shopee: <strong>{{ g.shopee_subid }}</strong></span>
+                <span *ngIf="g.amazon_tag" class="tag-pill tag-amazon">Amazon: <strong>{{ g.amazon_tag }}</strong></span>
+                <span *ngIf="g.magalu_store" class="tag-pill tag-magalu">Magalu: <strong>{{ g.magalu_store }}</strong></span>
+              </div>
+
+              <div *ngIf="g.keywords && g.keywords.length > 0" class="keywords-wrap">
+                <span class="keyword-pill" *ngFor="let kw of g.keywords">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pill-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                  {{ kw }}
+                </span>
+              </div>
+              <div *ngIf="g.footer_text" class="custom-footer-box">
+                <span class="footer-tag">RODAPÉ DO GRUPO:</span>
+                <span class="footer-val">{{ g.footer_text }}</span>
+              </div>
+            </div>
+            <div class="dest-actions">
+              <button class="btn-edit" (click)="openEditGroup(g)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                <span>Editar Grupo</span>
+              </button>
+              <button class="btn-delete" (click)="askDeleteGroup(g)" title="Remover grupo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: SESSÕES E CHIPS WHATSAPP (WAHA) -->
+      <div *ngIf="activeTab === 'whatsapp-sessions'" class="tab-content card">
+        <div class="content-header">
+          <div>
+            <h2>Sessões WhatsApp Conectadas (WAHA)</h2>
+            <p class="content-sub">Controle os números/chips conectados para rotatividade, escaneie QR Code e acesse os grupos do aparelho.</p>
+          </div>
+          <div class="header-actions-row">
+            <button class="btn btn-secondary" (click)="refreshWahaSessions()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              <span>Atualizar Status</span>
+            </button>
+            <button class="btn btn-teal" (click)="openNewSessionModal()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Nova Sessão</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="cards-list">
+          <div *ngFor="let s of waSessions" class="dest-item-card">
+            <div class="dest-info">
+              <div class="dest-badge-row">
+                <span class="dest-name">{{ s.name }}</span>
+                <span [class]="getWahaStatusBadgeClass(s.name)">
+                  {{ getWahaStatusLabel(s.name) }}
+                </span>
+                <span *ngIf="s.phone" class="dest-phone-tag">{{ s.phone }}</span>
+              </div>
+              <span class="dest-id">Protocolo WAHA HTTP API • Anti-Ban Round-Robin</span>
+            </div>
+            <div class="dest-actions-grid">
+              <button class="btn-action-sm btn-qr" (click)="openQrModal(s.name)" title="Ler QR Code">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span>QR Code</span>
+              </button>
+              <button class="btn-action-sm btn-start" (click)="startWahaSession(s.name)" title="Iniciar Sessão">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span>Iniciar</span>
+              </button>
+              <button class="btn-action-sm btn-stop" (click)="stopWahaSession(s.name)" title="Parar Sessão">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><rect x="6" y="6" width="12" height="12"></rect></svg>
+                <span>Parar</span>
+              </button>
+              <button class="btn-action-sm btn-restart" (click)="restartWahaSession(s.name)" title="Reiniciar Sessão">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                <span>Reiniciar</span>
+              </button>
+              <button class="btn-action-sm btn-explorer" (click)="openGroupExplorer(s.name)" title="Listar grupos do WhatsApp conectado">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span>Grupos</span>
+              </button>
+              <button class="btn-action-sm btn-logout" (click)="logoutWahaSession(s.name)" title="Desconectar WhatsApp">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <span>Desconectar</span>
+              </button>
+              <button class="btn-delete" (click)="askDeleteSession(s)" title="Remover sessão">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: CANAIS TELEGRAM -->
+      <div *ngIf="activeTab === 'telegram'" class="tab-content card">
+        <div class="content-header">
+          <div>
+            <h2>Canais de Entrega (Telegram)</h2>
+            <p class="content-sub">Canais onde as ofertas finais são repassadas e canal exclusivo para relatórios de erro.</p>
+          </div>
+          <button class="btn btn-teal" (click)="openNewTgModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Novo Destino</span>
+          </button>
+        </div>
+
+        <div class="cards-list">
+          <div *ngFor="let t of tgDestinations" class="dest-item-card">
+            <div class="dest-info">
+              <div class="dest-badge-row">
+                <span class="dest-name">{{ t.name }}</span>
+                <span *ngIf="t.admin" class="badge badge-warning">ALERTAS ADMIN</span>
+                <span *ngIf="!t.admin" class="badge badge-info">OFERTAS PÚBLICAS</span>
+              </div>
+              <span class="dest-id">{{ t.id }}</span>
+            </div>
+            <div class="dest-actions">
+              <button class="btn-delete" (click)="askDeleteTelegram(t)" title="Remover destino">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: FILA DE ENVIOS (WAHA) -->
+      <div *ngIf="activeTab === 'queue'" class="tab-content card">
+        <div class="content-header">
+          <div>
+            <h2>Fila de Envios WhatsApp (WAHA)</h2>
+            <p class="content-sub">Mensagens e ofertas aguardando envio com controle de intervalo e taxa anti-spam.</p>
+          </div>
+          <div class="action-buttons-row">
+            <button class="btn btn-teal" (click)="dispatchNextQueue()" [disabled]="queueCounts.total === 0 || queueBusy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <span>Disparar Próximo</span>
+            </button>
+            <button class="btn btn-secondary" (click)="trimQueue()" [disabled]="queueCounts.total <= 20">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <span>Aparar Fila (>20)</span>
+            </button>
+            <button class="btn btn-danger-outline" (click)="clearQueue()" [disabled]="queueCounts.total === 0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              <span>Limpar Fila</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="queue-stats-grid">
+          <div class="q-stat-card">
+            <span class="q-stat-label">TOTAL PENDENTE</span>
+            <span class="q-stat-val text-teal">{{ queueCounts.total }}</span>
+          </div>
+          <div class="q-stat-card">
+            <span class="q-stat-label">OFERTAS PADRÃO</span>
+            <span class="q-stat-val">{{ queueCounts.ofertas }}</span>
+          </div>
+          <div class="q-stat-card">
+            <span class="q-stat-label">CUPONS (PRIORIDADE)</span>
+            <span class="q-stat-val text-orange">{{ queueCounts.cupons }}</span>
+          </div>
+          <div class="q-stat-card">
+            <span class="q-stat-label">BROADCAST / CAMPANHAS</span>
+            <span class="q-stat-val">{{ queueCounts.broadcast }}</span>
+          </div>
+        </div>
+
+        <div class="queue-table-wrap">
+          <div *ngIf="queueItems.length === 0" class="empty-state">
+            <div class="empty-status-tag">[ FILA VAZIA ]</div>
+            <h3>Fila Vazia</h3>
+            <p>Todas as mensagens foram despachadas com sucesso ou a fila está limpa.</p>
+          </div>
+          <table *ngIf="queueItems.length > 0" class="data-table">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Mensagem (Prévia)</th>
+                <th>Status</th>
+                <th>Tentativas</th>
+                <th>Agendado Para</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let q of queueItems">
+                <td><span class="badge badge-info">{{ q.queue_type }}</span></td>
+                <td class="queue-msg-cell">{{ (q.payload && q.payload.text ? q.payload.text.slice(0, 100) : '') }}...</td>
+                <td>
+                  <span class="badge" [class.badge-warning]="q.status === 'pending'" [class.badge-success]="q.status === 'sent'">
+                    {{ q.status }}
+                  </span>
+                </td>
+                <td>{{ q.attempts }} / 3</td>
+                <td>{{ q.scheduled_for | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 5: DISPARO EM MASSA (BROADCAST) -->
+      <div *ngIf="activeTab === 'broadcast'" class="tab-content card">
+        <div class="content-header">
+          <div>
+            <h2>Disparo em Massa (Broadcast WhatsApp)</h2>
+            <p class="content-sub">Envie campanhas e avisos para múltiplos grupos com anti-ban, delay configurável e rotação de texto.</p>
+          </div>
+        </div>
+
+        <div *ngIf="broadcastSuccessMessage" class="alert-success-banner">
+          {{ broadcastSuccessMessage }}
+        </div>
+
+        <div class="broadcast-form-grid">
+          <div class="field-block">
+            <label>Sessão WAHA de Envio</label>
+            <select [(ngModel)]="broadcastSession" class="form-control">
+              <option *ngFor="let s of waSessions" [value]="s.name">{{ s.name }}</option>
+              <option *ngIf="waSessions.length === 0" value="default">default</option>
+            </select>
+          </div>
+
+          <div class="field-block">
+            <label>Mínimo de Participantes no Grupo</label>
+            <input type="number" [(ngModel)]="broadcastMinParticipants" class="form-control" min="1">
+          </div>
+
+          <div class="field-block">
+            <label>Intervalo entre Envios (segundos)</label>
+            <input type="number" [(ngModel)]="broadcastDelay" class="form-control" min="5" max="300">
+          </div>
+
+          <div class="field-block checkbox-block">
+            <label class="custom-checkbox-row">
+              <input type="checkbox" [(ngModel)]="broadcastIgnoreAnnounce" />
+              <span>Ignorar grupos somente leitura (onde não podemos postar)</span>
+            </label>
+            <label class="custom-checkbox-row">
+              <input type="checkbox" [(ngModel)]="broadcastMentionAll" />
+              <span>Mencionar todos os membros (&#64;everyone)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="templates-section">
+          <div class="section-top-row">
+            <h3>Variações de Mensagem (Rotação Anti-Spam)</h3>
+            <button class="btn btn-secondary btn-sm" (click)="addBroadcastTemplate()">+ Adicionar Modelo</button>
+          </div>
+          <div *ngFor="let t of broadcastTemplates; let i = index" class="template-item-row">
+            <span class="template-idx">Modelo {{ i + 1 }}</span>
+            <textarea [(ngModel)]="broadcastTemplates[i]" rows="3" class="form-control"></textarea>
+            <button *ngIf="broadcastTemplates.length > 1" class="btn-delete" (click)="removeBroadcastTemplate(i)" title="Remover">✕</button>
+          </div>
+        </div>
+
+        <div class="broadcast-footer-actions">
+          <button class="btn btn-primary btn-lg" (click)="startBroadcast()" [disabled]="broadcasting">
+            <span>{{ broadcasting ? 'Iniciando Disparo...' : 'Iniciar Disparo em Massa' }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MODAL: EDIT WHATSAPP GROUP (Completo: Dados, Tags por Grupo, Espelhamento) -->
+      <div *ngIf="editingGroup" class="modal-backdrop">
+        <div class="modal-dialog card edit-modal-card modal-lg">
+          <div class="modal-header">
+            <div class="modal-header-info">
+              <div class="group-icon-avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+              </div>
+              <div>
+                <h3 class="modal-title">Configurar Grupo WhatsApp</h3>
+                <span class="modal-sub">{{ editingGroup.id }}</span>
+              </div>
+            </div>
+            <button class="close-btn" (click)="editingGroup = null">×</button>
+          </div>
+
+          <div class="modal-body modal-scrollable">
+            <!-- SEÇÃO 1: DADOS BÁSICOS -->
+            <div class="modal-section-card">
+              <h4 class="section-title">Dados Básicos & Conexão</h4>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label>Nome do Grupo</label>
+                  <input type="text" [(ngModel)]="editingGroup.name" placeholder="Ex: Noivas Promos">
+                </div>
+                <div class="form-group">
+                  <label>ID do Grupo (JID WhatsApp)</label>
+                  <input type="text" [(ngModel)]="editingGroup.id" placeholder="120363409255159200&#64;g.us">
+                </div>
+              </div>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label>Chip / Sessão de Envio (WAHA)</label>
+                  <select [(ngModel)]="editingGroup.session_name">
+                    <option value="">Automático (Round-Robin entre chips ativos)</option>
+                    <option *ngFor="let s of waSessions" [value]="s.name">{{ s.name }}</option>
+                  </select>
+                </div>
+                <div class="form-group align-center-checkbox">
+                  <label class="custom-checkbox-row">
+                    <input type="checkbox" [(ngModel)]="editingGroup.active">
+                    <span>Grupo Ativo no Sistema</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- SEÇÃO 2: TAGS EXCLUSIVAS DE AFILIADO DESTE GRUPO -->
+            <div class="modal-section-card">
+              <div class="section-header-row">
+                <h4 class="section-title">Tags de Afiliado Exclusivas deste Grupo</h4>
+                <span class="section-tag-badge">Substituição Automática</span>
+              </div>
+              <p class="section-hint">
+                As tags configuradas aqui serão utilizadas automaticamente para todas as mensagens enviadas para este grupo. Deixe em branco caso deseje usar as tags gerais do usuário.
+              </p>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label>Tag Mercado Livre (matt_tool / tag)</label>
+                  <input type="text" [(ngModel)]="editingGroup.ml_tag" placeholder="Ex: noivas, noivas2, cupom">
+                </div>
+                <div class="form-group">
+                  <label>Shopee SubId</label>
+                  <input type="text" [(ngModel)]="editingGroup.shopee_subid" placeholder="Ex: noivas, pardalpromo">
+                </div>
+              </div>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label>Amazon Tag (Store ID / Tracking ID)</label>
+                  <input type="text" [(ngModel)]="editingGroup.amazon_tag" placeholder="Ex: noivas-20, pardal-20">
+                </div>
+                <div class="form-group">
+                  <label>Magalu Loja Magazine Você</label>
+                  <input type="text" [(ngModel)]="editingGroup.magalu_store" placeholder="Ex: magazinenoivas, magazinepardal">
+                </div>
+              </div>
+            </div>
+
+            <!-- SEÇÃO 3: ESPELHAMENTO DE GRUPOS WHATSAPP -->
+            <div class="modal-section-card">
+              <div class="section-header-row">
+                <h4 class="section-title">Espelhamento de Mensagens (WhatsApp para WhatsApp)</h4>
+                <span class="section-tag-badge-purple">Motor Nativo</span>
+              </div>
+              <p class="section-hint">
+                Permite capturar mensagens recebidas neste grupo via WAHA Webhook, converter automaticamente os links para as tags dos seus grupos de destino e repassá-las em tempo real.
+              </p>
+              <div class="form-group">
+                <label class="custom-checkbox-row">
+                  <input type="checkbox" [(ngModel)]="editingGroup.is_monitored">
+                  <span>Definir como Grupo Monitorado (Origem de Mensagens)</span>
+                </label>
+              </div>
+              <div class="form-group" *ngIf="editingGroup.is_monitored">
+                <label class="custom-checkbox-row">
+                  <input type="checkbox" [(ngModel)]="editingGroup.mirror_enabled">
+                  <span>Ativar Espelhamento Automático para Grupos de Destino</span>
+                </label>
+              </div>
+              <div class="form-group" *ngIf="editingGroup.is_monitored && editingGroup.mirror_enabled">
+                <label>Grupos de Destino para Repassar as Mensagens Espelhadas:</label>
+                <div class="targets-checkbox-grid">
+                  <div *ngFor="let dest of waGroups" class="target-checkbox-item" [class.hidden]="dest.id === editingGroup.id">
+                    <label class="custom-checkbox-row">
+                      <input 
+                        type="checkbox" 
+                        [checked]="isGroupTargetSelected(dest.id)" 
+                        (change)="toggleGroupTarget(dest.id)"
+                      >
+                      <span>{{ dest.name }} <small class="text-muted">({{ dest.id }})</small></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SEÇÃO 4: FILTROS & RODAPÉ -->
+            <div class="modal-section-card">
+              <h4 class="section-title">Filtros de Palavras-Chave & Rodapé</h4>
+              <div class="form-group">
+                <label>Palavras-Chave de Filtro (Separadas por vírgula)</label>
+                <input type="text" [(ngModel)]="editingKeywordsInput" placeholder="Ex: vestido, noiva, casamento, maquiagem">
+                <p class="field-hint">Se preenchido, apenas mensagens que contenham ao menos um desses termos serão encaminhadas.</p>
+              </div>
+              <div class="form-group">
+                <label>Rodapé Personalizado do Grupo</label>
+                <textarea 
+                  [(ngModel)]="editingGroup.footer_text" 
+                  rows="3" 
+                  placeholder="Ex: Entre no nosso grupo VIP de Noivas: https://seusite.com.br/grupo"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="editingGroup = null">Cancelar</button>
+            <button class="btn btn-teal" (click)="saveGroupEdit()" [disabled]="!editingGroup.name.trim() || !editingGroup.id.trim()">
+              <span>Salvar Configurações</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: QR CODE WAHA -->
+      <div *ngIf="qrModalSession" class="modal-backdrop">
+        <div class="modal-dialog card qr-modal-card">
+          <div class="modal-header">
+            <div class="modal-header-info">
+              <div class="group-icon-avatar qr-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+              </div>
+              <div>
+                <h3 class="modal-title">Conectar WhatsApp via QR Code</h3>
+                <span class="modal-sub">Sessão: <strong>{{ qrModalSession }}</strong></span>
+              </div>
+            </div>
+            <button class="close-btn" (click)="closeQrModal()">×</button>
+          </div>
+          <div class="modal-body qr-modal-body">
+            <div class="qr-code-container">
+              <div *ngIf="qrLoading" class="qr-loading-spinner">
+                <div class="spinner"></div>
+                <span>Carregando QR Code...</span>
+              </div>
+              <img *ngIf="!qrLoading && qrCodeImg" [src]="qrCodeImg" alt="WhatsApp QR Code" class="qr-image" />
+              <div *ngIf="!qrLoading && !qrCodeImg" class="qr-empty-msg">
+                <span>{{ qrStatusMessage || 'Sessão já conectada ou aguardando inicialização.' }}</span>
+              </div>
+            </div>
+            <div class="qr-instructions">
+              <ol>
+                <li>Abra o <strong>WhatsApp</strong> no seu celular;</li>
+                <li>Toque em <strong>Mais opções</strong> (Android) ou <strong>Configurações</strong> (iPhone);</li>
+                <li>Selecione <strong>Aparelhos conectados</strong> e depois <strong>Conectar um aparelho</strong>;</li>
+                <li>Aponte a câmera para a tela para escanear o QR Code acima.</li>
+              </ol>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="fetchQrCode(qrModalSession)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              <span>Recarregar QR</span>
+            </button>
+            <button class="btn btn-teal" (click)="closeQrModal()">
+              <span>Concluir</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: EXPLORADOR DE GRUPOS WAHA DO CELULAR -->
+      <div *ngIf="showGroupExplorer" class="modal-backdrop">
+        <div class="modal-dialog card explorer-modal-card modal-lg">
+          <div class="modal-header">
+            <div class="modal-header-info">
+              <div class="group-icon-avatar explorer-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </div>
+              <div>
+                <h3 class="modal-title">Grupos no Celular Conectado</h3>
+                <span class="modal-sub">Sessão: <strong>{{ selectedExplorerSession }}</strong> (WAHA)</span>
+              </div>
+            </div>
+            <button class="close-btn" (click)="showGroupExplorer = false">×</button>
+          </div>
+
+          <div class="modal-body modal-scrollable">
+            <div class="explorer-filter-bar">
+              <input 
+                type="text" 
+                [(ngModel)]="explorerSearch" 
+                placeholder="Buscar grupo pelo nome ou JID..." 
+                class="explorer-search-input"
+              />
+              <button class="btn btn-secondary" (click)="loadWahaExplorerGroups(selectedExplorerSession)" [disabled]="explorerLoading">
+                <span>{{ explorerLoading ? 'Carregando...' : 'Atualizar Grupos' }}</span>
+              </button>
+            </div>
+
+            <div *ngIf="explorerLoading" class="explorer-spinner-wrap">
+              <div class="spinner"></div>
+              <span>Consultando grupos no WhatsApp conectado...</span>
+            </div>
+
+            <div *ngIf="!explorerLoading && filteredExplorerGroups.length === 0" class="empty-state">
+              <p>Nenhum grupo encontrado com esse termo ou nenhum grupo disponível neste chip.</p>
+            </div>
+
+            <div *ngIf="!explorerLoading && filteredExplorerGroups.length > 0" class="explorer-groups-list">
+              <div *ngFor="let g of filteredExplorerGroups" class="explorer-group-item">
+                <div class="exp-group-info">
+                  <div class="exp-name-row">
+                    <span class="exp-group-name">{{ g.name }}</span>
+                    <span *ngIf="g.is_registered" class="badge badge-success">Já Cadastrado</span>
+                    <span *ngIf="g.is_monitored" class="badge badge-purple">Monitorado</span>
+                    <span *ngIf="g.is_announce" class="badge badge-warning">Apenas Avisos</span>
+                  </div>
+                  <span class="exp-group-id">{{ g.id }}</span>
+                  <span class="exp-part-count">👥 {{ g.participants_count || 0 }} participantes</span>
+                </div>
+                <div class="exp-group-actions">
+                  <button 
+                    class="btn-sm btn-teal" 
+                    (click)="importGroupAction(g, 'destination')"
+                    title="Adicionar grupo como destino para envio de ofertas"
+                  >
+                    <span>+ Destino</span>
+                  </button>
+                  <button 
+                    class="btn-sm btn-purple" 
+                    (click)="importGroupAction(g, 'monitored')"
+                    title="Adicionar grupo como monitorado para espelhamento automático"
+                  >
+                    <span>👁️ Monitorar</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="showGroupExplorer = false">Fechar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: NEW WHATSAPP GROUP -->
+      <div *ngIf="showNewGroupModal" class="modal-backdrop">
+        <div class="modal-dialog card small-modal-card">
+          <div class="modal-header">
+            <h3 class="modal-title">Novo Grupo WhatsApp</h3>
+            <button class="close-btn" (click)="showNewGroupModal = false">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Nome do Grupo</label>
+              <input type="text" [(ngModel)]="newGroup.name" placeholder="Ex: Maromba Descontos">
+            </div>
+            <div class="form-group">
+              <label>ID do Grupo (JID WhatsApp)</label>
+              <input type="text" [(ngModel)]="newGroup.id" placeholder="120363409255159200&#64;g.us">
+            </div>
+            <div class="form-group">
+              <label>Tag Mercado Livre Exclusiva (Opcional)</label>
+              <input type="text" [(ngModel)]="newGroup.ml_tag" placeholder="Ex: maromba, cupom">
+            </div>
+            <div class="form-group">
+              <label>Shopee SubId Exclusivo (Opcional)</label>
+              <input type="text" [(ngModel)]="newGroup.shopee_subid" placeholder="Ex: maromba">
+            </div>
+            <div class="form-group">
+              <label>Palavras-Chave de Filtro (Separadas por vírgula)</label>
+              <input type="text" [(ngModel)]="newKeywordsInput" placeholder="Ex: creatina, whey, treino, academia">
+            </div>
+            <div class="form-group">
+              <label>Rodapé Personalizado (Opcional)</label>
+              <textarea [(ngModel)]="newGroup.footer_text" rows="3" placeholder="Texto de convite ou link do grupo..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="showNewGroupModal = false">Cancelar</button>
+            <button class="btn btn-teal" (click)="saveNewGroup()" [disabled]="!newGroup.name.trim() || !newGroup.id.trim()">
+              <span>Salvar Grupo</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: NEW SESSION -->
+      <div *ngIf="showNewSessionModal" class="modal-backdrop">
+        <div class="modal-dialog card small-modal-card">
+          <div class="modal-header">
+            <h3 class="modal-title">Nova Sessão WhatsApp</h3>
+            <button class="close-btn" (click)="showNewSessionModal = false">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Identificador da Sessão</label>
+              <input type="text" [(ngModel)]="newSessionName" placeholder="WHATS_BUSSINESS_02">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="showNewSessionModal = false">Cancelar</button>
+            <button class="btn btn-teal" (click)="saveNewSession()" [disabled]="!newSessionName.trim()">
+              <span>Adicionar Sessão</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: NEW TELEGRAM DESTINATION -->
+      <div *ngIf="showNewTgModal" class="modal-backdrop">
+        <div class="modal-dialog card small-modal-card">
+          <div class="modal-header">
+            <h3 class="modal-title">Novo Destino Telegram</h3>
+            <button class="close-btn" (click)="showNewTgModal = false">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Nome do Canal / Grupo</label>
+              <input type="text" [(ngModel)]="newTg.name" placeholder="Ex: Canal Principal">
+            </div>
+            <div class="form-group">
+              <label>Username (&#64;canal) ou Chat ID (-100...)</label>
+              <input type="text" [(ngModel)]="newTg.id" placeholder="&#64;meu_canal_promos">
+            </div>
+            <label class="custom-checkbox-row">
+              <input type="checkbox" [(ngModel)]="newTg.admin">
+              <span>Canal Exclusivo para Alertas e Erros Admin</span>
+            </label>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="showNewTgModal = false">Cancelar</button>
+            <button class="btn btn-teal" (click)="saveNewTg()" [disabled]="!newTg.name.trim() || !newTg.id.trim()">
+              <span>Adicionar Destino</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: CONFIRM DELETE GROUP -->
+      <div *ngIf="groupToDelete" class="modal-backdrop">
+        <div class="modal-dialog card confirm-modal-card">
+          <div class="modal-header">
+            <div class="confirm-icon-box danger">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </div>
+            <h3 class="modal-title">Remover Grupo</h3>
+            <button class="close-btn" (click)="groupToDelete = null">×</button>
+          </div>
+          <div class="modal-body">
+            <p class="confirm-message">
+              Deseja realmente remover o grupo WhatsApp <strong>{{ groupToDelete.name }}</strong>?
+            </p>
+            <p class="confirm-sub">O bot deixará de encaminhar ofertas para este grupo.</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="groupToDelete = null">Cancelar</button>
+            <button class="btn btn-danger" (click)="executeDeleteGroup()">
+              <span>Sim, Remover Grupo</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: CONFIRM DELETE SESSION -->
+      <div *ngIf="sessionToDelete" class="modal-backdrop">
+        <div class="modal-dialog card confirm-modal-card">
+          <div class="modal-header">
+            <div class="confirm-icon-box danger">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </div>
+            <h3 class="modal-title">Remover Sessão</h3>
+            <button class="close-btn" (click)="sessionToDelete = null">×</button>
+          </div>
+          <div class="modal-body">
+            <p class="confirm-message">
+              Deseja realmente desconectar a sessão <strong>{{ sessionToDelete.name }}</strong>?
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="sessionToDelete = null">Cancelar</button>
+            <button class="btn btn-danger" (click)="executeDeleteSession()">
+              <span>Sim, Remover Sessão</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: CONFIRM DELETE TELEGRAM -->
+      <div *ngIf="telegramToDelete" class="modal-backdrop">
+        <div class="modal-dialog card confirm-modal-card">
+          <div class="modal-header">
+            <div class="confirm-icon-box danger">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </div>
+            <h3 class="modal-title">Remover Destino Telegram</h3>
+            <button class="close-btn" (click)="telegramToDelete = null">×</button>
+          </div>
+          <div class="modal-body">
+            <p class="confirm-message">
+              Deseja realmente remover o canal <strong>{{ telegramToDelete.name }}</strong>?
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="telegramToDelete = null">Cancelar</button>
+            <button class="btn btn-danger" (click)="executeDeleteTelegram()">
+              <span>Sim, Remover</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>

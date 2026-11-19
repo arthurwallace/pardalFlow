@@ -1,0 +1,27 @@
+# ==============================================================
+# Pardal PromoHub - Docker Compose para Desenvolvimento Local (DEV)
+# ==============================================================
+# Sobe o container apontando para o banco de dados 'pardal_flow_dev'
+# no servidor PostgreSQL (192.168.1.25:5432) com auto-criação de banco
+# e tabelas na primeira execução.
+# ==============================================================
+
+services:
+  backend-dev:
+    build:
+      context: .
+      pull: false
+    container_name: pardal_backend_dev
+    restart: unless-stopped
+    ports:
+      - "8085:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=${DATABASE_URL_DEV}
+      - PORT=8000
+      - HOST=0.0.0.0
+      - SECRET_KEY=${SECRET_KEY_DEV}
+    volumes:
+      - ./backend:/app/backend
+      - ./data/sessions:/app/backend/sessions
+      - ./data/app_data:/app/backend/data

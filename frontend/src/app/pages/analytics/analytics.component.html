@@ -1,0 +1,399 @@
+<div class="analytics-page">
+  <!-- HEADER CATEGORY & TITLE -->
+  <div class="page-header">
+    <div>
+      <span class="category-tag">RELATÓRIOS E RETENÇÃO</span>
+      <h1 class="main-title">Monitor de <span class="highlight-text">Entradas e Saídas</span></h1>
+      <p class="subtitle">
+        Análise detalhada de retenção, tempo de permanência e churn dos seus grupos de WhatsApp via monitoramento nativo do WAHA.
+      </p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-teal" (click)="loadCurrentView()" [disabled]="loading">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon" [class.spin]="loading">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+        <span>{{ loading ? 'Carregando...' : 'Atualizar Dados' }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TOP MODE SELECTOR -->
+  <div class="tabs-nav">
+    <button class="tab-btn" [class.active]="viewMode === 'groups'" (click)="viewMode = 'groups'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      <span>Monitor de Membros WhatsApp</span>
+    </button>
+    <button class="tab-btn" [class.active]="viewMode === 'affiliates'" (click)="selectAffiliatesView()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+      <span>Relatórios de Comissões & Cliques</span>
+    </button>
+  </div>
+
+  <ng-container *ngIf="viewMode === 'groups'">
+  <!-- TABS POR GRUPO -->
+  <div class="groups-tabs-nav">
+    <button 
+      *ngFor="let g of groups" 
+      class="group-tab-btn" 
+      [class.active]="selectedGroup.id === g.id"
+      (click)="selectGroup(g)"
+    >
+      <span class="tab-emoji">{{ g.icon }}</span>
+      <span class="tab-name">{{ g.name }}</span>
+      <span *ngIf="g.hasWebhook" class="tab-badge-active">ATIVO</span>
+      <span *ngIf="!g.hasWebhook" class="tab-badge-pending">PENDENTE</span>
+    </button>
+  </div>
+
+  <!-- CASO: GRUPO NOIVAS (ATIVO) -->
+  <ng-container *ngIf="selectedGroup.hasWebhook && summary.total_records > 0">
+    <!-- GROUP HERO INFO -->
+    <div class="group-hero-card card">
+      <div class="hero-left">
+        <div class="hero-avatar">{{ selectedGroup.icon }}</div>
+        <div class="hero-details">
+          <div class="hero-title-row">
+            <h2>Grupo: {{ selectedGroup.name }}</h2>
+            <span class="badge badge-success">Monitoramento Nativo Ativo ({{ summary.total_records | number }} eventos)</span>
+          </div>
+          <p class="hero-sub">{{ selectedGroup.description }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERIOD FILTER BAR (Arthur's request: hoje, semana, mês, todo o período) -->
+    <div class="period-filter-bar">
+      <div class="period-label-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="period-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <span class="period-title">Filtrar Movimentações:</span>
+      </div>
+      <div class="period-pill-group">
+        <button 
+          type="button"
+          class="period-pill-btn" 
+          [class.active]="selectedPeriod === 'today'" 
+          (click)="setPeriod('today')"
+        >
+          <span>Hoje</span>
+        </button>
+        <button 
+          type="button"
+          class="period-pill-btn" 
+          [class.active]="selectedPeriod === 'yesterday'" 
+          (click)="setPeriod('yesterday')"
+        >
+          <span>Ontem</span>
+        </button>
+        <button 
+          type="button"
+          class="period-pill-btn" 
+          [class.active]="selectedPeriod === 'week'" 
+          (click)="setPeriod('week')"
+        >
+          <span>Últimos 7 dias</span>
+        </button>
+        <button 
+          type="button"
+          class="period-pill-btn" 
+          [class.active]="selectedPeriod === 'month'" 
+          (click)="setPeriod('month')"
+        >
+          <span>Últimos 30 dias</span>
+        </button>
+        <button 
+          type="button"
+          class="period-pill-btn" 
+          [class.active]="selectedPeriod === 'all'" 
+          (click)="setPeriod('all')"
+        >
+          <span>Todo o período</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI METRIC CARDS DO GRUPO SELECIONADO (Atualizados dinamicamente pelo período) -->
+    <div class="kpi-grid">
+      <div class="card kpi-card">
+        <div class="kpi-head">
+          <span class="kpi-label">TOTAL DE REGISTROS</span>
+          <div class="kpi-icon teal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </div>
+        </div>
+        <span class="kpi-val">{{ periodKPI.total_records | number }}</span>
+        <span class="kpi-sub neutral">{{ periodKPI.period_title }}</span>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-head">
+          <span class="kpi-label">ATUALMENTE NO GRUPO</span>
+          <div class="kpi-icon green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-svg"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          </div>
+        </div>
+        <span class="kpi-val text-green">{{ periodKPI.total_active | number }}</span>
+        <span class="kpi-sub success"><span class="dot-status green"></span> Membros Ativos</span>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-head">
+          <span class="kpi-label">TOTAL DE SAÍDAS</span>
+          <div class="kpi-icon red">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-svg"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+          </div>
+        </div>
+        <span class="kpi-val text-red">{{ periodKPI.total_exits | number }}</span>
+        <span class="kpi-sub text-red"><span class="dot-status red"></span> Saídas no período</span>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-head">
+          <span class="kpi-label">SAÍDAS &lt; 15 MINUTOS</span>
+          <div class="kpi-icon yellow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </div>
+        </div>
+        <span class="kpi-val text-yellow">{{ periodKPI.quick_exits_under_15m | number }}</span>
+        <span class="kpi-sub text-yellow"><span class="dot-status yellow"></span> {{ periodKPI.quick_exit_percentage | number:'1.1-1' }}% das saídas (Churn rápido)</span>
+      </div>
+    </div>
+
+    <!-- PARTICIPANTS TABLE CARD -->
+    <div class="card table-card">
+      <!-- CONTROLS & FILTER BAR -->
+      <div class="table-controls-bar">
+        <div class="controls-left">
+          <h2>Listagem de Participantes</h2>
+          <span class="results-count">Exibindo {{ filteredAndSortedRecords.length }} registros</span>
+        </div>
+
+        <div class="controls-right">
+          <!-- STATUS FILTER -->
+          <div class="filter-item">
+            <label>Status</label>
+            <select [(ngModel)]="statusFilter" (change)="currentPage = 1">
+              <option value="Todos">Todos os Status</option>
+              <option value="Ativos">Apenas Ativos</option>
+              <option value="Saídas">Todas as Saídas</option>
+              <option value="Saídas < 15 min">Saídas &lt; 15 min (Churn rápido)</option>
+            </select>
+          </div>
+
+          <!-- SEARCH PHONE -->
+          <div class="search-item">
+            <label>Buscar Telefone</label>
+            <div class="search-input-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" [(ngModel)]="searchPhone" placeholder="Ex: (61) 99999-8888 ou 5561..." (input)="currentPage = 1">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLE WITH CLICKABLE SORT HEADERS -->
+      <div class="table-responsive">
+        <table class="participants-table">
+          <thead>
+            <tr>
+              <th class="sortable" (click)="sort('phone')">
+                <div class="th-content">
+                  <span>Telefone</span>
+                  <span class="sort-indicator">{{ getSortIcon('phone') }}</span>
+                </div>
+              </th>
+              <th class="sortable" (click)="sort('entry_time')">
+                <div class="th-content">
+                  <span>Entrada</span>
+                  <span class="sort-indicator">{{ getSortIcon('entry_time') }}</span>
+                </div>
+              </th>
+              <th class="sortable" (click)="sort('exit_time')">
+                <div class="th-content">
+                  <span>Saída</span>
+                  <span class="sort-indicator">{{ getSortIcon('exit_time') }}</span>
+                </div>
+              </th>
+              <th class="sortable" (click)="sort('minutes')">
+                <div class="th-content">
+                  <span>Tempo de Grupo</span>
+                  <span class="sort-indicator">{{ getSortIcon('minutes') }}</span>
+                </div>
+              </th>
+              <th class="sortable" (click)="sort('tag')">
+                <div class="th-content">
+                  <span>Status / Tag</span>
+                  <span class="sort-indicator">{{ getSortIcon('tag') }}</span>
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="paginatedRecords.length === 0">
+              <td colspan="5" class="empty-cell">
+                Nenhum registro encontrado para os filtros selecionados.
+              </td>
+            </tr>
+            <tr *ngFor="let p of paginatedRecords" [class.row-quick-exit]="p.tag && p.tag.includes('< 15')" [class.row-active]="p.status === 'Ativo'">
+              <!-- TELEFONE -->
+              <td class="phone-cell">
+                <span class="phone-num">{{ formatPhone(p.phone) }}</span>
+              </td>
+
+              <!-- ENTRADA -->
+              <td class="date-cell">
+                {{ p.entry_time ? (p.entry_time | date:'dd/MM/yyyy HH:mm') : '-' }}
+              </td>
+
+              <!-- SAÍDA -->
+              <td class="date-cell">
+                {{ p.exit_time ? (p.exit_time | date:'dd/MM/yyyy HH:mm') : '-' }}
+              </td>
+
+              <!-- TEMPO DE GRUPO -->
+              <td class="duration-cell">
+                <span class="duration-badge">{{ formatGroupTime(p.group_time) }}</span>
+              </td>
+
+              <!-- STATUS / TAG -->
+              <td class="tag-cell">
+                <span 
+                  class="badge" 
+                  [class.badge-success]="p.status === 'Ativo'"
+                  [class.badge-danger]="p.tag && p.tag.includes('< 15')"
+                  [class.badge-warning]="p.status === 'Inativo' && (!p.tag || !p.tag.includes('< 15'))"
+                >
+                  {{ p.tag || p.status }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- PAGINATION FOOTER -->
+      <div class="pagination-footer">
+        <div class="page-size-selector">
+          <span>Mostrar:</span>
+          <select [(ngModel)]="pageSize" (change)="currentPage = 1">
+            <option [ngValue]="25">25 por página</option>
+            <option [ngValue]="50">50 por página</option>
+            <option [ngValue]="100">100 por página</option>
+          </select>
+        </div>
+
+        <div class="page-info">
+          Página {{ currentPage }} de {{ totalPages }} ({{ filteredAndSortedRecords.length | number }} registros)
+        </div>
+
+        <div class="page-buttons">
+          <button class="btn btn-secondary btn-sm" [disabled]="currentPage === 1" (click)="currentPage = 1">
+            «
+          </button>
+          <button class="btn btn-secondary btn-sm" [disabled]="currentPage === 1" (click)="currentPage = currentPage - 1">
+            ‹ Anterior
+          </button>
+          <button class="btn btn-secondary btn-sm" [disabled]="currentPage === totalPages" (click)="currentPage = currentPage + 1">
+            Próxima ›
+          </button>
+          <button class="btn btn-secondary btn-sm" [disabled]="currentPage === totalPages" (click)="currentPage = totalPages">
+            »
+          </button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- CASO: GRUPOS AGUARDANDO EVENTOS DO WAHA -->
+  <div *ngIf="summary.total_records === 0" class="card pending-card">
+    <div class="pending-icon-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pending-icon"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+    </div>
+    <h2>Aguardando Eventos de Entrada e Saída para {{ selectedGroup.name }}</h2>
+    <p class="pending-text">
+      O grupo <strong>{{ selectedGroup.name }}</strong> ainda não possui entradas ou saídas de membros registradas via WAHA.
+    </p>
+    <div class="endpoint-code-box">
+      <span class="code-label">WEBHOOK NATIVO WAHA CONFIGURADO NO BACKEND:</span>
+      <code>POST /api/v1/waha/webhook (Eventos de grupo tratados automaticamente)</code>
+    </div>
+    <div class="pending-actions">
+      <button class="btn btn-teal" (click)="selectGroup(groups[0])">
+        <span>Visualizar Grupo Noivas (2.016 Registros Sincronizados)</span>
+      </button>
+    </div>
+  </div>
+  </ng-container>
+
+  <!-- CASO: MÉTRICAS & COMISSÕES DE AFILIADOS (SHOPEE & ML) -->
+  <ng-container *ngIf="viewMode === 'affiliates'">
+    <div class="affiliates-metrics-grid">
+      <!-- CARD 1: CLIQUES SHOPEE -->
+      <div class="card metric-card-aff">
+        <div class="aff-top">
+          <span class="aff-tag shopee">SHOPEE GRAPHQL</span>
+          <button class="btn btn-sm btn-secondary" (click)="loadShopeeClicks()" [disabled]="shopeeClicksLoading">
+            <span>{{ shopeeClicksLoading ? '...' : 'Atualizar' }}</span>
+          </button>
+        </div>
+        <div class="aff-val">{{ shopeeClicksTotal | number }}</div>
+        <span class="aff-sub">Cliques registrados nas últimas 24h</span>
+      </div>
+
+      <!-- CARD 2: COMISSÕES SHOPEE -->
+      <div class="card metric-card-aff">
+        <div class="aff-top">
+          <span class="aff-tag shopee">COMISSÕES SHOPEE</span>
+          <button class="btn btn-sm btn-secondary" (click)="loadShopeeCommissions()" [disabled]="shopeeCommLoading">
+            <span>{{ shopeeCommLoading ? '...' : 'Atualizar' }}</span>
+          </button>
+        </div>
+        <div class="aff-val text-green">R$ {{ shopeeTotalCommission | number:'1.2-2' }}</div>
+        <span class="aff-sub">{{ shopeeTotalOrders }} pedido(s) computado(s)</span>
+      </div>
+
+      <!-- CARD 3: MERCADO LIVRE -->
+      <div class="card metric-card-aff">
+        <div class="aff-top">
+          <span class="aff-tag ml">MERCADO LIVRE</span>
+          <button class="btn btn-sm btn-secondary" (click)="loadMlSales()" [disabled]="mlLoading">
+            <span>{{ mlLoading ? '...' : 'Atualizar' }}</span>
+          </button>
+        </div>
+        <div class="aff-val text-cyan">{{ mlStatusText }}</div>
+        <span class="aff-sub">Monitoramento nativo a cada 30 min</span>
+      </div>
+    </div>
+
+    <!-- SHOPEE CONVERSIONS TABLE -->
+    <div class="card table-card" *ngIf="shopeeOrders.length > 0">
+      <div class="table-header-title">
+        <h3>Últimos Pedidos e Conversões Shopee</h3>
+        <span class="badge badge-success">API Conectada</span>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Data/Hora</th>
+              <th>Produto</th>
+              <th>Taxa (%)</th>
+              <th>Comissão (R$)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let ord of shopeeOrders">
+              <td>{{ ord.purchaseTime ? (ord.purchaseTime * 1000 | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+              <td>{{ ord.productName || 'Produto Shopee' }}</td>
+              <td>{{ ord.commissionRate }}%</td>
+              <td><strong class="text-green">R$ {{ ord.totalCommission | number:'1.2-2' }}</strong></td>
+              <td><span class="badge badge-info">{{ ord.orderStatus || 'Confirmado' }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+</div>

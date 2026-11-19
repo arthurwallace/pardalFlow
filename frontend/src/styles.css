@@ -2,22 +2,29 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* DARK BLUE ENTERPRISE PALETTE */
-  --bg-primary: #060913;
-  --bg-secondary: #0b1122;
-  --bg-card: #0f182e;
-  --bg-card-hover: #15223f;
-  --bg-input: #121c36;
+  /* DARK ENTERPRISE SAAS PALETTE - HIGH CONTRAST */
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #0f172a;
+  --bg-card: #131d35;
+  --bg-card-hover: #192747;
+  --bg-input: #0c1427;
   
-  --border-color: #1e2c4f;
-  --border-subtle: #2a3d6b;
+  --border-color: #223254;
+  --border-subtle: #2f4575;
   --border-focus: #38bdf8;
 
-  --text-primary: #ffffff;
-  --text-secondary: #e2e8f0;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
   --text-label: #38bdf8;
   --text-tag: #7dd3fc;
+
+  /* Aliases to guarantee 100% dark mode contrast across all components */
+  --text-main: var(--text-primary);
+  --text-sub: var(--text-secondary);
+  --teal-accent: var(--accent-teal);
+  --card-bg: var(--bg-card);
+  --bg-main: var(--bg-primary);
 
   --accent-primary: #2563eb;
   --accent-primary-hover: #1d4ed8;
@@ -110,18 +117,135 @@ body {
   min-height: 100vh;
 }
 
-/* STRICT ICON SIZING (Prevent huge/broken SVGs) */
+/* STRICT GLOBAL ICON SIZING & SVG CONFINEMENT (Prevents huge/broken SVGs) */
 svg {
   flex-shrink: 0;
   display: inline-block;
   vertical-align: middle;
 }
 
-.btn-icon, .pill-icon, .rule-icon, .search-icon, .tip-icon, .sub-icon, .nav-icon {
-  width: 16px !important;
-  height: 16px !important;
-  min-width: 16px !important;
-  max-width: 16px !important;
+/* Regra de segurança global: SVG sem dimensão jamais estoura */
+svg:not([width]):not([height]):not(.empty-svg) {
+  max-width: 24px;
+  max-height: 24px;
+}
+
+/* Garante contenção absoluta para SVGs em botões, abas, links e headers */
+button svg,
+.btn svg,
+.btn-sm svg,
+.tab-btn svg,
+.group-tab-btn svg,
+.nav-link svg,
+.nav-group-header svg,
+.sub-link svg,
+.topbar-action-btn svg,
+.btn-action-sm svg,
+.action-btn svg,
+.close-btn svg,
+.status-pill svg {
+  width: 18px !important;
+  height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* Classes explícitas de ícones em todo o sistema */
+.tab-icon,
+.btn-icon,
+.pill-icon,
+.rule-icon,
+.search-icon,
+.tip-icon,
+.sub-icon,
+.nav-icon,
+.action-icon,
+.period-icon,
+.chevron-icon,
+.theme-icon,
+.notif-icon,
+.hamburger-icon,
+.target-svg,
+.badge-icon,
+.card-icon,
+.footer-icon,
+.group-svg {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  max-width: 18px !important;
+  min-height: 18px !important;
+  max-height: 18px !important;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.empty-svg {
+  width: 44px !important;
+  height: 44px !important;
+  color: var(--text-muted);
+}
+
+/* Ícones de caixas de métricas e hero */
+.metric-icon-box svg,
+.feed-icon-box svg,
+.empty-icon-circle svg,
+.group-icon-avatar svg,
+.confirm-icon-box svg {
+  width: 20px !important;
+  height: 20px !important;
+  max-width: 20px !important;
+  max-height: 20px !important;
+}
+
+.brand-icon-svg {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+/* TABS NAVIGATION GLOBAL */
+.tabs-nav {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1.15rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tab-btn:hover {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.tab-btn.active {
+  background-color: rgba(20, 184, 166, 0.15);
+  border-color: var(--accent-teal);
+  color: #34d399;
+}
+
+.tab-btn .tab-icon {
+  width: 18px !important;
+  height: 18px !important;
 }
 
 /* HIGH-CONTRAST HEADINGS (Always uses theme variables) */
@@ -403,3 +527,96 @@ code, pre {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-subtle);
 }
+
+/* ==============================================================
+   HIGH CONTRAST & DARK MODE LEGIBILITY ENFORCEMENT
+   ============================================================== */
+h1, h2, h3, h4, h5, h6,
+.main-title,
+.content-header h2,
+.section-title,
+.card h2, .card h3 {
+  color: var(--text-primary) !important;
+}
+
+.subtitle,
+.content-sub,
+.section-desc,
+.card-desc,
+.empty-state p,
+.instruction-box p {
+  color: var(--text-secondary) !important;
+}
+
+label,
+.form-label,
+.q-stat-label,
+.kpi-label,
+.meta-label,
+.category-tag {
+  color: var(--text-tag) !important;
+  font-weight: 700 !important;
+}
+
+/* Form controls contrast */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--border-focus) !important;
+}
+
+/* Data Tables */
+.data-table th, table th {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 2px solid var(--border-color) !important;
+  font-weight: 700 !important;
+}
+
+.data-table td, table td {
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+/* Status tabs & buttons */
+.tabs-nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.75rem;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-secondary) !important;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tab-btn:hover {
+  background-color: var(--bg-card-hover);
+  color: var(--text-primary) !important;
+  border-color: var(--border-subtle);
+}
+
+.tab-btn.active {
+  background-color: var(--accent-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--accent-primary) !important;
+}
+

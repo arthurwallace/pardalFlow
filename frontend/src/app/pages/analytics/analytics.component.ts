@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { AnalyticsSummary, ParticipantRecord } from '../../core/models';
 
@@ -17,328 +18,117 @@ interface GroupTab {
   selector: 'app-analytics',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <div class="analytics-page">
-      <!-- HEADER CATEGORY & TITLE -->
-      <div class="page-header">
-        <div>
-          <span class="category-tag">RELATÓRIOS E RETENÇÃO</span>
-          <h1 class="main-title">Monitor de <span class="highlight-text">Entradas e Saídas</span></h1>
-          <p class="subtitle">
-            Análise detalhada de retenção, tempo de permanência e churn dos seus grupos de WhatsApp via webhook do n8n.
-          </p>
-        </div>
-        <div class="header-actions">
-          <button class="btn btn-teal" (click)="loadGroupData()" [disabled]="loading">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon" [class.spin]="loading">
-              <polyline points="23 4 23 10 17 10"></polyline>
-              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-            </svg>
-            <span>{{ loading ? 'Carregando...' : 'Atualizar Dados' }}</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- TABS POR GRUPO -->
-      <div class="groups-tabs-nav">
-        <button 
-          *ngFor="let g of groups" 
-          class="group-tab-btn" 
-          [class.active]="selectedGroup.id === g.id"
-          (click)="selectGroup(g)"
-        >
-          <span class="tab-emoji">{{ g.icon }}</span>
-          <span class="tab-name">{{ g.name }}</span>
-          <span *ngIf="g.hasWebhook" class="tab-badge-active">ATIVO</span>
-          <span *ngIf="!g.hasWebhook" class="tab-badge-pending">PENDENTE</span>
-        </button>
-      </div>
-
-      <!-- CASO: GRUPO NOIVAS (ATIVO) -->
-      <ng-container *ngIf="selectedGroup.hasWebhook && summary.total_records > 0">
-        <!-- GROUP HERO INFO -->
-        <div class="group-hero-card card">
-          <div class="hero-left">
-            <div class="hero-avatar">{{ selectedGroup.icon }}</div>
-            <div class="hero-details">
-              <div class="hero-title-row">
-                <h2>Grupo: {{ selectedGroup.name }}</h2>
-                <span class="badge badge-success">Webhook n8n Conectado (3.162 eventos brutos)</span>
-              </div>
-              <p class="hero-sub">{{ selectedGroup.description }}</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- PERIOD FILTER BAR (Arthur's request: hoje, semana, mês, todo o período) -->
-        <div class="period-filter-bar">
-          <div class="period-label-box">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="period-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            <span class="period-title">Filtrar Movimentações:</span>
-          </div>
-          <div class="period-pill-group">
-            <button 
-              type="button"
-              class="period-pill-btn" 
-              [class.active]="selectedPeriod === 'today'" 
-              (click)="setPeriod('today')"
-            >
-              <span>Hoje</span>
-            </button>
-            <button 
-              type="button"
-              class="period-pill-btn" 
-              [class.active]="selectedPeriod === 'yesterday'" 
-              (click)="setPeriod('yesterday')"
-            >
-              <span>Ontem</span>
-            </button>
-            <button 
-              type="button"
-              class="period-pill-btn" 
-              [class.active]="selectedPeriod === 'week'" 
-              (click)="setPeriod('week')"
-            >
-              <span>Últimos 7 dias</span>
-            </button>
-            <button 
-              type="button"
-              class="period-pill-btn" 
-              [class.active]="selectedPeriod === 'month'" 
-              (click)="setPeriod('month')"
-            >
-              <span>Últimos 30 dias</span>
-            </button>
-            <button 
-              type="button"
-              class="period-pill-btn" 
-              [class.active]="selectedPeriod === 'all'" 
-              (click)="setPeriod('all')"
-            >
-              <span>Todo o período</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- KPI METRIC CARDS DO GRUPO SELECIONADO (Atualizados dinamicamente pelo período) -->
-        <div class="kpi-grid">
-          <div class="card kpi-card">
-            <div class="kpi-head">
-              <span class="kpi-label">TOTAL DE REGISTROS</span>
-              <div class="kpi-icon teal">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-              </div>
-            </div>
-            <span class="kpi-val">{{ periodKPI.total_records | number }}</span>
-            <span class="kpi-sub neutral">{{ periodKPI.period_title }}</span>
-          </div>
-
-          <div class="card kpi-card">
-            <div class="kpi-head">
-              <span class="kpi-label">ATUALMENTE NO GRUPO</span>
-              <div class="kpi-icon green">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-svg"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-              </div>
-            </div>
-            <span class="kpi-val text-green">{{ periodKPI.total_active | number }}</span>
-            <span class="kpi-sub success">🟢 Membros Ativos</span>
-          </div>
-
-          <div class="card kpi-card">
-            <div class="kpi-head">
-              <span class="kpi-label">TOTAL DE SAÍDAS</span>
-              <div class="kpi-icon red">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-svg"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-              </div>
-            </div>
-            <span class="kpi-val text-red">{{ periodKPI.total_exits | number }}</span>
-            <span class="kpi-sub text-red">🔴 Saídas no período</span>
-          </div>
-
-          <div class="card kpi-card">
-            <div class="kpi-head">
-              <span class="kpi-label">SAÍDAS &lt; 15 MINUTOS</span>
-              <div class="kpi-icon yellow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-              </div>
-            </div>
-            <span class="kpi-val text-yellow">{{ periodKPI.quick_exits_under_15m | number }}</span>
-            <span class="kpi-sub text-yellow">🚨 {{ periodKPI.quick_exit_percentage | number:'1.1-1' }}% das saídas (Churn rápido)</span>
-          </div>
-        </div>
-
-        <!-- PARTICIPANTS TABLE CARD -->
-        <div class="card table-card">
-          <!-- CONTROLS & FILTER BAR -->
-          <div class="table-controls-bar">
-            <div class="controls-left">
-              <h2>Listagem de Participantes</h2>
-              <span class="results-count">Exibindo {{ filteredAndSortedRecords.length }} registros</span>
-            </div>
-
-            <div class="controls-right">
-              <!-- STATUS FILTER -->
-              <div class="filter-item">
-                <label>Status</label>
-                <select [(ngModel)]="statusFilter" (change)="currentPage = 1">
-                  <option value="Todos">Todos os Status</option>
-                  <option value="Ativos">🟢 Apenas Ativos</option>
-                  <option value="Saídas">🔴 Todas as Saídas</option>
-                  <option value="Saídas < 15 min">🚨 Saídas &lt; 15 min</option>
-                </select>
-              </div>
-
-              <!-- SEARCH PHONE -->
-              <div class="search-item">
-                <label>Buscar Telefone</label>
-                <div class="search-input-box">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                  <input type="text" [(ngModel)]="searchPhone" placeholder="Ex: (61) 99999-8888 ou 5561..." (input)="currentPage = 1">
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- TABLE WITH CLICKABLE SORT HEADERS -->
-          <div class="table-responsive">
-            <table class="participants-table">
-              <thead>
-                <tr>
-                  <th class="sortable" (click)="sort('phone')">
-                    <div class="th-content">
-                      <span>Telefone</span>
-                      <span class="sort-indicator">{{ getSortIcon('phone') }}</span>
-                    </div>
-                  </th>
-                  <th class="sortable" (click)="sort('entry_time')">
-                    <div class="th-content">
-                      <span>Entrada</span>
-                      <span class="sort-indicator">{{ getSortIcon('entry_time') }}</span>
-                    </div>
-                  </th>
-                  <th class="sortable" (click)="sort('exit_time')">
-                    <div class="th-content">
-                      <span>Saída</span>
-                      <span class="sort-indicator">{{ getSortIcon('exit_time') }}</span>
-                    </div>
-                  </th>
-                  <th class="sortable" (click)="sort('minutes')">
-                    <div class="th-content">
-                      <span>Tempo de Grupo</span>
-                      <span class="sort-indicator">{{ getSortIcon('minutes') }}</span>
-                    </div>
-                  </th>
-                  <th class="sortable" (click)="sort('tag')">
-                    <div class="th-content">
-                      <span>Status / Tag</span>
-                      <span class="sort-indicator">{{ getSortIcon('tag') }}</span>
-                    </div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngIf="paginatedRecords.length === 0">
-                  <td colspan="5" class="empty-cell">
-                    Nenhum registro encontrado para os filtros selecionados.
-                  </td>
-                </tr>
-                <tr *ngFor="let p of paginatedRecords" [class.row-quick-exit]="p.tag && p.tag.includes('< 15')" [class.row-active]="p.status === 'Ativo'">
-                  <!-- TELEFONE -->
-                  <td class="phone-cell">
-                    <span class="phone-num">{{ formatPhone(p.phone) }}</span>
-                  </td>
-
-                  <!-- ENTRADA -->
-                  <td class="date-cell">
-                    {{ p.entry_time ? (p.entry_time | date:'dd/MM/yyyy HH:mm') : '-' }}
-                  </td>
-
-                  <!-- SAÍDA -->
-                  <td class="date-cell">
-                    {{ p.exit_time ? (p.exit_time | date:'dd/MM/yyyy HH:mm') : '-' }}
-                  </td>
-
-                  <!-- TEMPO DE GRUPO -->
-                  <td class="duration-cell">
-                    <span class="duration-badge">{{ formatGroupTime(p.group_time) }}</span>
-                  </td>
-
-                  <!-- STATUS / TAG -->
-                  <td class="tag-cell">
-                    <span 
-                      class="badge" 
-                      [class.badge-success]="p.status === 'Ativo'"
-                      [class.badge-danger]="p.tag && p.tag.includes('< 15')"
-                      [class.badge-warning]="p.status === 'Inativo' && (!p.tag || !p.tag.includes('< 15'))"
-                    >
-                      {{ p.tag || p.status }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- PAGINATION FOOTER -->
-          <div class="pagination-footer">
-            <div class="page-size-selector">
-              <span>Mostrar:</span>
-              <select [(ngModel)]="pageSize" (change)="currentPage = 1">
-                <option [ngValue]="25">25 por página</option>
-                <option [ngValue]="50">50 por página</option>
-                <option [ngValue]="100">100 por página</option>
-              </select>
-            </div>
-
-            <div class="page-info">
-              Página {{ currentPage }} de {{ totalPages }} ({{ filteredAndSortedRecords.length | number }} registros)
-            </div>
-
-            <div class="page-buttons">
-              <button class="btn btn-secondary btn-sm" [disabled]="currentPage === 1" (click)="currentPage = 1">
-                «
-              </button>
-              <button class="btn btn-secondary btn-sm" [disabled]="currentPage === 1" (click)="currentPage = currentPage - 1">
-                ‹ Anterior
-              </button>
-              <button class="btn btn-secondary btn-sm" [disabled]="currentPage === totalPages" (click)="currentPage = currentPage + 1">
-                Próxima ›
-              </button>
-              <button class="btn btn-secondary btn-sm" [disabled]="currentPage === totalPages" (click)="currentPage = totalPages">
-                »
-              </button>
-            </div>
-          </div>
-        </div>
-      </ng-container>
-
-      <!-- CASO: GRUPOS AGUARDANDO CONFIGURAÇÃO NO N8N -->
-      <div *ngIf="!selectedGroup.hasWebhook || summary.total_records === 0" class="card pending-card">
-        <div class="pending-icon-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pending-icon"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-        </div>
-        <h2>Webhook n8n Pendente para {{ selectedGroup.name }}</h2>
-        <p class="pending-text">
-          O grupo <strong>{{ selectedGroup.name }}</strong> ainda não possui eventos gravados no seu webhook do CasaOS n8n.
-        </p>
-        <div class="endpoint-code-box">
-          <span class="code-label">URL DO ENDPOINT PARA CADASTRAR NO N8N:</span>
-          <code>https://seu-n8n.dominio.com/webhook/csv_monitoramento_entradas_saidas_grupos/{{ selectedGroup.slug }}</code>
-        </div>
-        <div class="pending-actions">
-          <button class="btn btn-teal" (click)="selectGroup(groups[0])">
-            <span>Visualizar Grupo Noivas Ativo (2.016 Registros)</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './analytics.component.html',
   styles: [`
     .analytics-page {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
     }
+
+    /* TOP TABS NAVIGATION */
+    .tabs-nav {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      padding: 0.65rem 1.15rem;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .tab-btn:hover {
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      background-color: rgba(20, 184, 166, 0.15);
+      border-color: var(--accent-teal);
+      color: var(--accent-teal);
+    }
+
+    .tab-icon {
+      width: 18px !important;
+      height: 18px !important;
+      min-width: 18px !important;
+      max-width: 18px !important;
+      min-height: 18px !important;
+      max-height: 18px !important;
+      flex-shrink: 0;
+      display: inline-block;
+    }
+
+    .affiliates-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric-card-aff {
+      display: flex;
+      flex-direction: column;
+      padding: 1.25rem;
+      border-radius: 12px;
+    }
+
+    .aff-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .aff-tag {
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .aff-tag.shopee { background: rgba(238, 77, 45, 0.12); color: #ee4d2d; }
+    .aff-tag.ml { background: rgba(255, 230, 0, 0.2); color: #2d3277; }
+
+    .aff-val {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+    }
+
+    .aff-sub {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .text-green { color: #10b981; }
+    .text-cyan { color: #06b6d4; }
+
+    .table-header-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .table-header-title h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
 
     .category-tag {
       font-size: 0.75rem;
@@ -950,14 +740,16 @@ interface GroupTab {
 })
 export class AnalyticsComponent implements OnInit {
   api = inject(ApiService);
+  route = inject(ActivatedRoute);
+  router = inject(Router);
 
   groups: GroupTab[] = [
-    { id: 'noivas', name: 'Noivas', icon: '💍', slug: 'noivas', description: 'Grupo de promoções e produtos para noivas e casamentos.', hasWebhook: true },
-    { id: 'pardal', name: 'Pardal Principal', icon: '🦅', slug: 'pardal', description: 'Grupo geral com as melhores promoções diárias.', hasWebhook: false },
-    { id: 'cupons', name: 'Cupons VIP', icon: '🎟️', slug: 'cupons', description: 'Grupo especializado em cupons de desconto exclusivos.', hasWebhook: false },
-    { id: 'baby', name: 'Baby & Kids', icon: '👶', slug: 'baby', description: 'Ofertas para bebês, gestantes e produtos infantis.', hasWebhook: false },
-    { id: 'maromba', name: 'Maromba & Fitness', icon: '💪', slug: 'maromba', description: 'Suplementos, roupas fitness e equipamentos de treino.', hasWebhook: false },
-    { id: 'pardal_2', name: 'Pardal 2', icon: '🦅', slug: 'pardal_2', description: 'Grupo reserva e contingência para rotação de membros.', hasWebhook: false }
+    { id: 'noivas', name: 'Noivas', icon: 'NV', slug: 'noivas', description: 'Grupo de promoções e produtos para noivas e casamentos.', hasWebhook: true },
+    { id: 'pardal', name: 'Pardal Principal', icon: 'PD', slug: 'pardal', description: 'Grupo geral com as melhores promoções diárias.', hasWebhook: true },
+    { id: 'cupons', name: 'Cupons VIP', icon: 'CP', slug: 'cupons', description: 'Grupo especializado em cupons de desconto exclusivos.', hasWebhook: true },
+    { id: 'baby', name: 'Baby & Kids', icon: 'BK', slug: 'baby', description: 'Ofertas para bebês, gestantes e produtos infantis.', hasWebhook: true },
+    { id: 'maromba', name: 'Maromba & Fitness', icon: 'MB', slug: 'maromba', description: 'Suplementos, roupas fitness e equipamentos de treino.', hasWebhook: true },
+    { id: 'pardal_2', name: 'Pardal 2', icon: 'P2', slug: 'pardal_2', description: 'Grupo reserva e contingência para rotação de membros.', hasWebhook: true }
   ];
 
   selectedGroup: GroupTab = this.groups[0];
@@ -972,6 +764,18 @@ export class AnalyticsComponent implements OnInit {
   };
 
   loading = false;
+  viewMode: 'groups' | 'affiliates' = 'groups';
+
+  // Affiliate Metrics
+  shopeeClicksTotal = 0;
+  shopeeClicksLoading = false;
+  shopeeTotalCommission = 0;
+  shopeeTotalOrders = 0;
+  shopeeCommLoading = false;
+  shopeeOrders: any[] = [];
+  mlStatusText = 'Ativo (Sincronizado)';
+  mlLoading = false;
+
   statusFilter = 'Todos';
   searchPhone = '';
   selectedPeriod: 'today' | 'yesterday' | 'week' | 'month' | 'all' = 'today';
@@ -983,7 +787,81 @@ export class AnalyticsComponent implements OnInit {
   pageSize = 50;
 
   ngOnInit() {
-    this.loadGroupData();
+    this.route.queryParams.subscribe(params => {
+      const mode = params['mode'];
+      if (mode === 'affiliates' || mode === 'shopee' || mode === 'ml') {
+        this.viewMode = 'affiliates';
+        this.loadAffiliateReports();
+      } else {
+        this.viewMode = 'groups';
+        this.loadGroupData();
+      }
+    });
+  }
+
+  loadCurrentView() {
+    if (this.viewMode === 'groups') {
+      this.loadGroupData();
+    } else {
+      this.loadAffiliateReports();
+    }
+  }
+
+  selectAffiliatesView() {
+    this.viewMode = 'affiliates';
+    this.loadAffiliateReports();
+  }
+
+  loadAffiliateReports() {
+    this.loadShopeeClicks();
+    this.loadShopeeCommissions();
+    this.loadMlSales();
+  }
+
+  loadShopeeClicks() {
+    this.shopeeClicksLoading = true;
+    this.api.getShopeeClicks(1).subscribe({
+      next: (res) => {
+        this.shopeeClicksLoading = false;
+        if (res.ok) {
+          this.shopeeClicksTotal = res.total_clicks || 0;
+        }
+      },
+      error: () => this.shopeeClicksLoading = false
+    });
+  }
+
+  loadShopeeCommissions() {
+    this.shopeeCommLoading = true;
+    this.api.getShopeeCommissions().subscribe({
+      next: (res) => {
+        this.shopeeCommLoading = false;
+        if (res.ok) {
+          this.shopeeTotalCommission = res.total_commission || 0;
+          this.shopeeTotalOrders = res.total_orders || 0;
+          this.shopeeOrders = res.orders || [];
+        }
+      },
+      error: () => this.shopeeCommLoading = false
+    });
+  }
+
+  loadMlSales() {
+    this.mlLoading = true;
+    this.api.getMercadoLivreSales().subscribe({
+      next: (res) => {
+        this.mlLoading = false;
+        if (res.ok) {
+          this.mlStatusText = 'Conectado & Monitorando';
+        } else {
+          this.mlStatusText = 'Pendente de Cookies';
+        }
+      },
+      error: () => {
+        this.mlLoading = false;
+        this.mlStatusText = 'Pendente de Cookies';
+      }
+    });
   }
 
   selectGroup(g: GroupTab) {

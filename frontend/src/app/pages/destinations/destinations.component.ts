@@ -1,382 +1,15 @@
-import { Component, OnInit, inject } from '@angular/core';
+﻿import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
-import { WhatsAppGroup, WhatsAppSession, TelegramDestination } from '../../core/models';
+import { WhatsAppGroup, WhatsAppSession, TelegramDestination, QueueCounts, QueueItem } from '../../core/models';
 
 @Component({
   selector: 'app-destinations',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
-  template: `
-    <div class="destinations-page">
-      <!-- HEADER CATEGORY & TITLE -->
-      <div class="page-header">
-        <div>
-          <span class="category-tag">DESTINOS DE DISPARO</span>
-          <h1 class="main-title">Gerenciar <span class="highlight-text">destinos</span></h1>
-          <p class="subtitle">
-            Configure grupos de WhatsApp, sessões/chips conectados para rotatividade e canais de Telegram para onde suas ofertas serão encaminhadas.
-          </p>
-        </div>
-      </div>
-
-      <!-- TABS NAVIGATION -->
-      <div class="tabs-nav">
-        <button class="tab-btn" [class.active]="activeTab === 'whatsapp-groups'" (click)="setTab('whatsapp-groups')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-          <span>Grupos WhatsApp ({{ waGroups.length | number }})</span>
-        </button>
-
-        <button class="tab-btn" [class.active]="activeTab === 'whatsapp-sessions'" (click)="setTab('whatsapp-sessions')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
-          <span>Sessões / Chips ({{ waSessions.length | number }})</span>
-        </button>
-
-        <button class="tab-btn" [class.active]="activeTab === 'telegram'" (click)="setTab('telegram')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-          <span>Canais Telegram ({{ tgDestinations.length | number }})</span>
-        </button>
-      </div>
-
-      <!-- TAB 1: GRUPOS DO WHATSAPP -->
-      <div *ngIf="activeTab === 'whatsapp-groups'" class="tab-content card">
-        <div class="content-header">
-          <div>
-            <h2>Grupos de Destino (WhatsApp)</h2>
-            <p class="content-sub">Grupos que recebem as promoções filtradas. Cada grupo pode ter um rodapé personalizado.</p>
-          </div>
-          <button class="btn btn-teal" (click)="openNewGroupModal()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span>Novo Grupo</span>
-          </button>
-        </div>
-
-        <div class="cards-list">
-          <div *ngFor="let g of waGroups" class="dest-item-card">
-            <div class="dest-info">
-              <div class="dest-badge-row">
-                <span class="dest-name">{{ g.name }}</span>
-                <span [class]="g.active !== false ? 'badge badge-success' : 'badge badge-warning'">
-                  {{ g.active !== false ? 'Ativo' : 'Pausado' }}
-                </span>
-                <span class="badge badge-info">Sincronizado</span>
-              </div>
-              <span class="dest-id">{{ g.id }}</span>
-              <div *ngIf="g.keywords && g.keywords.length > 0" class="keywords-wrap">
-                <span class="keyword-pill" *ngFor="let kw of g.keywords">🏷️ {{ kw }}</span>
-              </div>
-              <div *ngIf="g.footer_text" class="custom-footer-box">
-                <span class="footer-tag">RODAPÉ DO GRUPO:</span>
-                <span class="footer-val">{{ g.footer_text }}</span>
-              </div>
-            </div>
-            <div class="dest-actions">
-              <button class="btn-edit" (click)="openEditGroup(g)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                <span>Editar Grupo</span>
-              </button>
-              <button class="btn-delete" (click)="askDeleteGroup(g)" title="Remover grupo">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 2: SESSÕES E CHIPS WHATSAPP -->
-      <div *ngIf="activeTab === 'whatsapp-sessions'" class="tab-content card">
-        <div class="content-header">
-          <div>
-            <h2>Sessões WhatsApp Conectadas</h2>
-            <p class="content-sub">Chips utilizados para rotatividade de envio de mensagens com aquecimento anti-bloqueio.</p>
-          </div>
-          <button class="btn btn-teal" (click)="openNewSessionModal()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span>Nova Sessão</span>
-          </button>
-        </div>
-
-        <div class="cards-list">
-          <div *ngFor="let s of waSessions" class="dest-item-card">
-            <div class="dest-info">
-              <div class="dest-badge-row">
-                <span class="dest-name">{{ s.name }}</span>
-                <span [class]="s.active ? 'badge badge-success' : 'badge badge-warning'">
-                  {{ s.active ? 'Conectado / Ativo' : 'Pausado' }}
-                </span>
-              </div>
-              <span class="dest-id">Protocolo: Baileys Webhook / CasaOS n8n</span>
-            </div>
-            <div class="dest-actions">
-              <label class="switch">
-                <input type="checkbox" [(ngModel)]="s.active" (change)="toggleSession(s)">
-                <span class="slider round"></span>
-              </label>
-              <button class="btn-delete" (click)="askDeleteSession(s)" title="Remover sessão">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 3: CANAIS TELEGRAM -->
-      <div *ngIf="activeTab === 'telegram'" class="tab-content card">
-        <div class="content-header">
-          <div>
-            <h2>Canais de Entrega (Telegram)</h2>
-            <p class="content-sub">Canais onde as ofertas finais são repassadas e canal exclusivo para relatórios de erro.</p>
-          </div>
-          <button class="btn btn-teal" (click)="openNewTgModal()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span>Novo Destino</span>
-          </button>
-        </div>
-
-        <div class="cards-list">
-          <div *ngFor="let t of tgDestinations" class="dest-item-card">
-            <div class="dest-info">
-              <div class="dest-badge-row">
-                <span class="dest-name">{{ t.name }}</span>
-                <span *ngIf="t.admin" class="badge badge-warning">ALERTAS ADMIN</span>
-                <span *ngIf="!t.admin" class="badge badge-info">OFERTAS PÚBLICAS</span>
-              </div>
-              <span class="dest-id">{{ t.id }}</span>
-            </div>
-            <div class="dest-actions">
-              <button class="btn-delete" (click)="askDeleteTelegram(t)" title="Remover destino">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="action-icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- MODAL: EDIT WHATSAPP GROUP (Name, ID, Keywords, Active, Custom Footer) -->
-      <div *ngIf="editingGroup" class="modal-backdrop">
-        <div class="modal-dialog card edit-modal-card">
-          <div class="modal-header">
-            <div class="modal-header-info">
-              <div class="group-icon-avatar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-              </div>
-              <div>
-                <h3 class="modal-title">Editar Grupo WhatsApp</h3>
-                <span class="modal-sub">{{ editingGroup.id }}</span>
-              </div>
-            </div>
-            <button class="close-btn" (click)="editingGroup = null">×</button>
-          </div>
-
-          <div class="modal-body">
-            <div class="form-group">
-              <label>Nome do Grupo</label>
-              <input type="text" [(ngModel)]="editingGroup.name" placeholder="Ex: Noivas Promos">
-            </div>
-
-            <div class="form-group">
-              <label>ID do Grupo (JID WhatsApp)</label>
-              <input type="text" [(ngModel)]="editingGroup.id" placeholder="120363409255159200@g.us">
-              <p class="field-hint">Identificador oficial do grupo no WhatsApp (ex: 120363409255159200&#64;g.us).</p>
-            </div>
-
-            <div class="form-group">
-              <label>Palavras-Chave de Filtro (Separadas por vírgula)</label>
-              <input type="text" [(ngModel)]="editingKeywordsInput" placeholder="Ex: vestido, noiva, casamento, maquiagem">
-              <p class="field-hint">Se preenchido, apenas mensagens com esses termos serão encaminhadas a este grupo.</p>
-            </div>
-
-            <div class="form-group">
-              <label class="custom-checkbox-row">
-                <input type="checkbox" [(ngModel)]="editingGroup.active">
-                <span>Grupo Ativo (recebendo ofertas)</span>
-              </label>
-            </div>
-
-            <div class="form-group">
-              <label>Rodapé Personalizado do Grupo</label>
-              <p class="field-hint">
-                Texto anexado ao final de cada mensagem enviada para este grupo (ex: link de convite, canal vip, etc.). Deixe em branco para usar o rodapé padrão geral.
-              </p>
-              <textarea 
-                [(ngModel)]="editingGroup.footer_text" 
-                rows="4" 
-                placeholder="Ex: Compartilhe com os amigos nosso grupo: https://seusite.com.br/grupo"
-              ></textarea>
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="editingGroup = null">Cancelar</button>
-            <button class="btn btn-teal" (click)="saveGroupEdit()" [disabled]="!editingGroup.name.trim() || !editingGroup.id.trim()">
-              <span>Salvar Alterações</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- MODAL: NEW WHATSAPP GROUP -->
-      <div *ngIf="showNewGroupModal" class="modal-backdrop">
-        <div class="modal-dialog card small-modal-card">
-          <div class="modal-header">
-            <h3 class="modal-title">Novo Grupo WhatsApp</h3>
-            <button class="close-btn" (click)="showNewGroupModal = false">×</button>
-          </div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label>Nome do Grupo</label>
-              <input type="text" [(ngModel)]="newGroup.name" placeholder="Ex: Maromba Descontos">
-            </div>
-            <div class="form-group">
-              <label>ID do Grupo (JID WhatsApp)</label>
-              <input type="text" [(ngModel)]="newGroup.id" placeholder="120363409255159200@g.us">
-            </div>
-            <div class="form-group">
-              <label>Palavras-Chave de Filtro (Separadas por vírgula)</label>
-              <input type="text" [(ngModel)]="newKeywordsInput" placeholder="Ex: creatina, whey, treino, academia">
-            </div>
-            <div class="form-group">
-              <label>Rodapé Personalizado (Opcional)</label>
-              <textarea [(ngModel)]="newGroup.footer_text" rows="3" placeholder="Texto de convite ou link do grupo..."></textarea>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="showNewGroupModal = false">Cancelar</button>
-            <button class="btn btn-teal" (click)="saveNewGroup()" [disabled]="!newGroup.name.trim() || !newGroup.id.trim()">
-              <span>Salvar Grupo</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- MODAL: NEW SESSION -->
-      <div *ngIf="showNewSessionModal" class="modal-backdrop">
-        <div class="modal-dialog card small-modal-card">
-          <div class="modal-header">
-            <h3 class="modal-title">Nova Sessão WhatsApp</h3>
-            <button class="close-btn" (click)="showNewSessionModal = false">×</button>
-          </div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label>Identificador da Sessão</label>
-              <input type="text" [(ngModel)]="newSessionName" placeholder="WHATS_BUSSINESS_02">
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="showNewSessionModal = false">Cancelar</button>
-            <button class="btn btn-teal" (click)="saveNewSession()" [disabled]="!newSessionName.trim()">
-              <span>Adicionar Sessão</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- MODAL: NEW TELEGRAM DESTINATION -->
-      <div *ngIf="showNewTgModal" class="modal-backdrop">
-        <div class="modal-dialog card small-modal-card">
-          <div class="modal-header">
-            <h3 class="modal-title">Novo Destino Telegram</h3>
-            <button class="close-btn" (click)="showNewTgModal = false">×</button>
-          </div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label>Nome do Canal / Grupo</label>
-              <input type="text" [(ngModel)]="newTg.name" placeholder="Ex: Canal Principal">
-            </div>
-            <div class="form-group">
-              <label>Username (&#64;canal) ou Chat ID (-100...)</label>
-              <input type="text" [(ngModel)]="newTg.id" placeholder="@meu_canal_promos">
-            </div>
-            <label class="custom-checkbox-row">
-              <input type="checkbox" [(ngModel)]="newTg.admin">
-              <span>Canal Exclusivo para Alertas e Erros Admin</span>
-            </label>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="showNewTgModal = false">Cancelar</button>
-            <button class="btn btn-teal" (click)="saveNewTg()" [disabled]="!newTg.name.trim() || !newTg.id.trim()">
-              <span>Adicionar Destino</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- MODAL: CONFIRM DELETE GROUP -->
-      <div *ngIf="groupToDelete" class="modal-backdrop">
-        <div class="modal-dialog card confirm-modal-card">
-          <div class="modal-header">
-            <div class="confirm-icon-box danger">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </div>
-            <h3 class="modal-title">Remover Grupo</h3>
-            <button class="close-btn" (click)="groupToDelete = null">×</button>
-          </div>
-          <div class="modal-body">
-            <p class="confirm-message">
-              Deseja realmente remover o grupo WhatsApp <strong>{{ groupToDelete.name }}</strong>?
-            </p>
-            <p class="confirm-sub">O bot deixará de encaminhar ofertas para este grupo.</p>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="groupToDelete = null">Cancelar</button>
-            <button class="btn btn-danger" (click)="executeDeleteGroup()">
-              <span>Sim, Remover Grupo</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- MODAL: CONFIRM DELETE SESSION -->
-      <div *ngIf="sessionToDelete" class="modal-backdrop">
-        <div class="modal-dialog card confirm-modal-card">
-          <div class="modal-header">
-            <div class="confirm-icon-box danger">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </div>
-            <h3 class="modal-title">Remover Sessão</h3>
-            <button class="close-btn" (click)="sessionToDelete = null">×</button>
-          </div>
-          <div class="modal-body">
-            <p class="confirm-message">
-              Deseja realmente desconectar a sessão <strong>{{ sessionToDelete.name }}</strong>?
-            </p>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="sessionToDelete = null">Cancelar</button>
-            <button class="btn btn-danger" (click)="executeDeleteSession()">
-              <span>Sim, Remover Sessão</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- MODAL: CONFIRM DELETE TELEGRAM -->
-      <div *ngIf="telegramToDelete" class="modal-backdrop">
-        <div class="modal-dialog card confirm-modal-card">
-          <div class="modal-header">
-            <div class="confirm-icon-box danger">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </div>
-            <h3 class="modal-title">Remover Destino Telegram</h3>
-            <button class="close-btn" (click)="telegramToDelete = null">×</button>
-          </div>
-          <div class="modal-body">
-            <p class="confirm-message">
-              Deseja realmente remover o canal <strong>{{ telegramToDelete.name }}</strong>?
-            </p>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="telegramToDelete = null">Cancelar</button>
-            <button class="btn btn-danger" (click)="executeDeleteTelegram()">
-              <span>Sim, Remover</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './destinations.component.html',
   styles: [`
     .destinations-page {
       display: flex;
@@ -829,6 +462,500 @@ import { WhatsAppGroup, WhatsAppSession, TelegramDestination } from '../../core/
         margin: 1rem auto;
       }
     }
+
+    /* QUEUE & BROADCAST STYLES */
+    .action-buttons-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .btn-danger-outline {
+      background: transparent;
+      border: 1px solid var(--accent-danger);
+      color: var(--accent-danger) !important;
+    }
+    .btn-danger-outline:hover {
+      background: var(--accent-danger-bg);
+    }
+    .queue-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .q-stat-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .q-stat-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-tag);
+      letter-spacing: 0.04em;
+    }
+    .q-stat-val {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+    .text-teal { color: #14b8a6 !important; }
+    .text-orange { color: #f97316 !important; }
+    .queue-table-wrap {
+      overflow-x: auto;
+    }
+    .empty-status-tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #14b8a6;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+    .broadcast-form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .checkbox-block {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      justify-content: center;
+    }
+    .templates-section {
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .section-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .section-top-row h3 {
+      font-size: 1rem;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .template-item-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.75rem;
+    }
+    .template-idx {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-tag);
+      white-space: nowrap;
+      padding-top: 0.4rem;
+    }
+    .template-item-row textarea {
+      flex: 1;
+    }
+    .broadcast-footer-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+    /* ESTILOS AVANÇADOS WAHA & TAGS POR GRUPO */
+    .header-actions-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .modal-lg {
+      max-width: 760px !important;
+      width: 90vw !important;
+    }
+    .modal-scrollable {
+      max-height: 72vh;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .modal-section-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .section-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .section-tag-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: rgba(20, 184, 166, 0.15);
+      color: #14b8a6;
+      border: 1px solid rgba(20, 184, 166, 0.3);
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .section-tag-badge-purple {
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .section-hint {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+      margin: 0;
+    }
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 640px) {
+      .form-row-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+    .align-center-checkbox {
+      display: flex;
+      align-items: center;
+      padding-top: 1.5rem;
+    }
+    .targets-checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.5rem;
+      max-height: 160px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 0.65rem;
+      background: var(--bg-card);
+    }
+    .target-checkbox-item {
+      font-size: 0.85rem;
+    }
+    .target-checkbox-item.hidden {
+      display: none;
+    }
+    .group-tags-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.35rem;
+    }
+    .tag-pill {
+      font-size: 0.72rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .tag-ml {
+      background: rgba(254, 240, 138, 0.15);
+      border: 1px solid rgba(250, 204, 21, 0.4);
+      color: #facc15;
+    }
+    .tag-shopee {
+      background: rgba(251, 146, 60, 0.15);
+      border: 1px solid rgba(249, 115, 22, 0.4);
+      color: #fb923c;
+    }
+    .tag-amazon {
+      background: rgba(96, 165, 250, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: #60a5fa;
+    }
+    .tag-magalu {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(14, 165, 233, 0.4);
+      color: #38bdf8;
+    }
+    .badge-purple {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+    .badge-cyan {
+      background: rgba(6, 182, 212, 0.15);
+      color: #22d3ee;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+    .badge-secondary {
+      background: rgba(148, 163, 184, 0.15);
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+    .dest-phone-tag {
+      font-size: 0.75rem;
+      font-family: monospace;
+      color: var(--text-secondary);
+      background: var(--bg-primary);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+    }
+    .dest-actions-grid {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn-action-sm {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.35rem 0.65rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+    .btn-action-sm .action-icon {
+      width: 14px;
+      height: 14px;
+    }
+    .btn-qr {
+      background: rgba(20, 184, 166, 0.15);
+      border-color: rgba(20, 184, 166, 0.4);
+      color: #14b8a6;
+    }
+    .btn-qr:hover {
+      background: rgba(20, 184, 166, 0.25);
+    }
+    .btn-start {
+      background: rgba(34, 197, 94, 0.12);
+      border-color: rgba(34, 197, 94, 0.3);
+      color: #4ade80;
+    }
+    .btn-start:hover {
+      background: rgba(34, 197, 94, 0.22);
+    }
+    .btn-stop {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+    .btn-stop:hover {
+      background: rgba(239, 68, 68, 0.22);
+    }
+    .btn-restart {
+      background: rgba(234, 179, 8, 0.12);
+      border-color: rgba(234, 179, 8, 0.3);
+      color: #facc15;
+    }
+    .btn-restart:hover {
+      background: rgba(234, 179, 8, 0.22);
+    }
+    .btn-explorer {
+      background: rgba(99, 102, 241, 0.12);
+      border-color: rgba(99, 102, 241, 0.3);
+      color: #818cf8;
+    }
+    .btn-explorer:hover {
+      background: rgba(99, 102, 241, 0.22);
+    }
+    .btn-logout {
+      background: rgba(148, 163, 184, 0.1);
+      border-color: rgba(148, 163, 184, 0.25);
+      color: #94a3b8;
+    }
+    .btn-logout:hover {
+      background: rgba(148, 163, 184, 0.2);
+    }
+    /* QR CODE MODAL */
+    .qr-modal-card {
+      max-width: 480px;
+    }
+    .qr-modal-body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+      padding: 1.25rem 0;
+    }
+    .qr-code-container {
+      width: 260px;
+      height: 260px;
+      background: #ffffff;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem;
+      border: 2px solid var(--border-color);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    .qr-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .qr-loading-spinner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      color: #64748b;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .qr-empty-msg {
+      color: #64748b;
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 1rem;
+    }
+    .qr-instructions {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1.15rem;
+      width: 100%;
+    }
+    .qr-instructions ol {
+      margin: 0;
+      padding-left: 1.2rem;
+      font-size: 0.825rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    /* EXPLORER MODAL */
+    .explorer-modal-card {
+      max-width: 820px;
+    }
+    .explorer-filter-bar {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .explorer-search-input {
+      flex: 1;
+    }
+    .explorer-spinner-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 2.5rem 0;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(20, 184, 166, 0.2);
+      border-top-color: #14b8a6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .explorer-groups-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      max-height: 55vh;
+      overflow-y: auto;
+    }
+    .explorer-group-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1.15rem;
+      gap: 1rem;
+      transition: border-color var(--transition-fast);
+    }
+    .explorer-group-item:hover {
+      border-color: rgba(20, 184, 166, 0.4);
+    }
+    .exp-group-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      min-width: 0;
+    }
+    .exp-name-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .exp-group-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+    }
+    .exp-group-id {
+      font-size: 0.75rem;
+      font-family: monospace;
+      color: var(--text-secondary);
+    }
+    .exp-part-count {
+      font-size: 0.75rem;
+      color: var(--text-tag);
+      font-weight: 500;
+    }
+    .exp-group-actions {
+      display: flex;
+      gap: 0.4rem;
+      flex-shrink: 0;
+    }
+    .btn-sm {
+      font-size: 0.75rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all var(--transition-fast);
+    }
+    .btn-purple {
+      background: rgba(168, 85, 247, 0.15);
+      border-color: rgba(168, 85, 247, 0.4);
+      color: #c084fc;
+    }
+    .btn-purple:hover {
+      background: rgba(168, 85, 247, 0.25);
+    }
   `]
 })
 export class DestinationsComponent implements OnInit {
@@ -836,11 +963,51 @@ export class DestinationsComponent implements OnInit {
   route = inject(ActivatedRoute);
   router = inject(Router);
 
-  activeTab: 'whatsapp-groups' | 'whatsapp-sessions' | 'telegram' = 'whatsapp-groups';
+  activeTab: 'whatsapp-groups' | 'whatsapp-sessions' | 'telegram' | 'queue' | 'broadcast' = 'whatsapp-groups';
 
   waGroups: WhatsAppGroup[] = [];
   waSessions: WhatsAppSession[] = [];
   tgDestinations: TelegramDestination[] = [];
+
+  // WAHA Live State & QR Code
+  wahaSessionsLive: any[] = [];
+  wahaStatusMap: { [key: string]: { status: string; phone?: string } } = {};
+  qrModalSession: string | null = null;
+  qrCodeImg: string | null = null;
+  qrLoading = false;
+  qrStatusMessage = '';
+  qrInterval: any = null;
+
+  // WAHA Group Explorer State
+  showGroupExplorer = false;
+  selectedExplorerSession = 'default';
+  explorerGroups: any[] = [];
+  explorerSearch = '';
+  explorerLoading = false;
+
+  get filteredExplorerGroups(): any[] {
+    if (!this.explorerSearch.trim()) return this.explorerGroups;
+    const q = this.explorerSearch.toLowerCase();
+    return this.explorerGroups.filter(g =>
+      (g.name && g.name.toLowerCase().includes(q)) ||
+      (g.id && g.id.toLowerCase().includes(q))
+    );
+  }
+
+  // Queue State
+  queueCounts: QueueCounts = { total: 0, ofertas: 0, cupons: 0, broadcast: 0 };
+  queueItems: QueueItem[] = [];
+  queueBusy = false;
+
+  // Broadcast State
+  broadcastSession = 'default';
+  broadcastMinParticipants = 10;
+  broadcastDelay = 15;
+  broadcastIgnoreAnnounce = true;
+  broadcastMentionAll = false;
+  broadcastTemplates: string[] = ['Confira as melhores promoções de hoje no nosso grupo!'];
+  broadcasting = false;
+  broadcastSuccessMessage = '';
 
   // Edit Group Modal
   editingGroup: WhatsAppGroup | null = null;
@@ -851,7 +1018,18 @@ export class DestinationsComponent implements OnInit {
   showNewSessionModal = false;
   showNewTgModal = false;
 
-  newGroup = { name: '', id: '', footer_text: '' };
+  newGroup: any = {
+    name: '',
+    id: '',
+    footer_text: '',
+    ml_tag: '',
+    shopee_subid: '',
+    amazon_tag: '',
+    magalu_store: '',
+    session_name: '',
+    is_monitored: false,
+    mirror_enabled: false
+  };
   newKeywordsInput = '';
   newSessionName = '';
   newTg = { name: '', id: '', admin: false };
@@ -868,15 +1046,24 @@ export class DestinationsComponent implements OnInit {
         this.activeTab = 'whatsapp-sessions';
       } else if (tab === 'telegram' || tab === 'tg') {
         this.activeTab = 'telegram';
-      } else if (tab === 'whatsapp-groups' || tab === 'groups') {
+      } else if (tab === 'queue' || tab === 'fila') {
+        this.activeTab = 'queue';
+        this.loadQueue();
+      } else if (tab === 'broadcast' || tab === 'disparo') {
+        this.activeTab = 'broadcast';
+      } else {
         this.activeTab = 'whatsapp-groups';
       }
     });
     this.loadAll();
+    this.loadQueue();
   }
 
-  setTab(tab: 'whatsapp-groups' | 'whatsapp-sessions' | 'telegram') {
+  setTab(tab: 'whatsapp-groups' | 'whatsapp-sessions' | 'telegram' | 'queue' | 'broadcast') {
     this.activeTab = tab;
+    if (tab === 'queue') {
+      this.loadQueue();
+    }
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab },
@@ -887,15 +1074,189 @@ export class DestinationsComponent implements OnInit {
   loadAll() {
     this.api.getWhatsAppGroups().subscribe({
       next: (data) => this.waGroups = data,
-      error: () => {}
+      error: () => { }
     });
     this.api.getWhatsAppSessions().subscribe({
-      next: (data) => this.waSessions = data,
-      error: () => {}
+      next: (data) => {
+        this.waSessions = data;
+        this.loadWahaSessionsLive();
+      },
+      error: () => { }
     });
     this.api.getTelegramDestinations().subscribe({
       next: (data) => this.tgDestinations = data,
-      error: () => {}
+      error: () => { }
+    });
+  }
+
+  // --- WAHA SESSIONS LIVE METHODS ---
+  loadWahaSessionsLive() {
+    this.api.getWahaSessions().subscribe({
+      next: (res: any) => {
+        const liveList = res?.sessions || [];
+        this.wahaSessionsLive = liveList;
+        this.wahaStatusMap = {};
+        for (const s of liveList) {
+          const sName = s.name || s.id;
+          const phone = s.me?.id ? s.me.id.split('@')[0] : (s.phone || '');
+          this.wahaStatusMap[sName] = {
+            status: s.status || 'UNKNOWN',
+            phone: phone
+          };
+        }
+      },
+      error: () => { }
+    });
+  }
+
+  refreshWahaSessions() {
+    this.loadAll();
+  }
+
+  getWahaStatusBadgeClass(sessionName: string): string {
+    const s = this.wahaStatusMap[sessionName];
+    const status = s?.status?.toUpperCase();
+    if (status === 'WORKING') return 'badge badge-success';
+    if (status === 'SCAN_QR_CODE') return 'badge badge-warning';
+    if (status === 'STARTING') return 'badge badge-info';
+    if (status === 'STOPPED') return 'badge badge-secondary';
+    return 'badge badge-secondary';
+  }
+
+  getWahaStatusLabel(sessionName: string): string {
+    const s = this.wahaStatusMap[sessionName];
+    const status = s?.status?.toUpperCase();
+    if (status === 'WORKING') return 'Conectado (Online)';
+    if (status === 'SCAN_QR_CODE') return 'Aguardando QR Code';
+    if (status === 'STARTING') return 'Iniciando Chip...';
+    if (status === 'STOPPED') return 'Parado (Desconectado)';
+    if (status === 'FAILED') return 'Falha na Conexão';
+    return s?.status || 'Desconhecido';
+  }
+
+  startWahaSession(sessionName: string) {
+    this.api.startWahaSession(sessionName).subscribe({
+      next: () => {
+        setTimeout(() => this.loadWahaSessionsLive(), 1500);
+      }
+    });
+  }
+
+  stopWahaSession(sessionName: string) {
+    this.api.stopWahaSession(sessionName).subscribe({
+      next: () => {
+        setTimeout(() => this.loadWahaSessionsLive(), 1000);
+      }
+    });
+  }
+
+  restartWahaSession(sessionName: string) {
+    this.api.restartWahaSession(sessionName).subscribe({
+      next: () => {
+        setTimeout(() => this.loadWahaSessionsLive(), 2000);
+      }
+    });
+  }
+
+  logoutWahaSession(sessionName: string) {
+    this.api.logoutWahaSession(sessionName).subscribe({
+      next: () => {
+        setTimeout(() => this.loadWahaSessionsLive(), 1500);
+      }
+    });
+  }
+
+  // --- QR CODE MODAL METHODS ---
+  openQrModal(sessionName: string) {
+    this.qrModalSession = sessionName;
+    this.qrCodeImg = null;
+    this.qrLoading = true;
+    this.qrStatusMessage = '';
+    this.fetchQrCode(sessionName);
+
+    if (this.qrInterval) clearInterval(this.qrInterval);
+    this.qrInterval = setInterval(() => {
+      if (!this.qrModalSession) {
+        clearInterval(this.qrInterval);
+        return;
+      }
+      this.api.getWahaSessions().subscribe({
+        next: (res: any) => {
+          const sessions = res?.sessions || [];
+          const current = sessions.find((s: any) => (s.name || s.id) === this.qrModalSession);
+          if (current && current.status?.toUpperCase() === 'WORKING') {
+            this.closeQrModal();
+            this.loadAll();
+          } else if (current && current.status?.toUpperCase() === 'SCAN_QR_CODE') {
+            this.fetchQrCode(this.qrModalSession!);
+          }
+        }
+      });
+    }, 4000);
+  }
+
+  closeQrModal() {
+    this.qrModalSession = null;
+    this.qrCodeImg = null;
+    if (this.qrInterval) {
+      clearInterval(this.qrInterval);
+      this.qrInterval = null;
+    }
+  }
+
+  fetchQrCode(sessionName: string) {
+    this.api.getWahaSessionQr(sessionName).subscribe({
+      next: (res: any) => {
+        this.qrLoading = false;
+        if (res?.image) {
+          this.qrCodeImg = res.image.startsWith('data:') ? res.image : `data:image/png;base64,${res.image}`;
+        } else if (res?.qr) {
+          this.qrCodeImg = res.qr.startsWith('data:') ? res.qr : `data:image/png;base64,${res.qr}`;
+        } else {
+          this.qrStatusMessage = 'Sessão já autenticada ou QR Code indisponível.';
+        }
+      },
+      error: () => {
+        this.qrLoading = false;
+        this.qrStatusMessage = 'Não foi possível carregar o QR Code. Inicie a sessão primeiro.';
+      }
+    });
+  }
+
+  // --- WAHA GROUP EXPLORER METHODS ---
+  openGroupExplorer(sessionName?: string) {
+    const sName = sessionName || (this.waSessions.length > 0 ? this.waSessions[0].name : 'default');
+    this.selectedExplorerSession = sName;
+    this.showGroupExplorer = true;
+    this.loadWahaExplorerGroups(sName);
+  }
+
+  loadWahaExplorerGroups(sessionName: string) {
+    this.explorerLoading = true;
+    this.api.getWahaGroups(sessionName).subscribe({
+      next: (res: any) => {
+        this.explorerGroups = res?.groups || [];
+        this.explorerLoading = false;
+      },
+      error: () => {
+        this.explorerGroups = [];
+        this.explorerLoading = false;
+      }
+    });
+  }
+
+  importGroupAction(group: any, action: 'destination' | 'monitored') {
+    this.api.importWahaGroup({
+      session_name: this.selectedExplorerSession,
+      group_id: group.id,
+      name: group.name || group.id,
+      action: action
+    }).subscribe({
+      next: () => {
+        group.is_registered = true;
+        if (action === 'monitored') group.is_monitored = true;
+        this.loadAll();
+      }
     });
   }
 
@@ -905,8 +1266,37 @@ export class DestinationsComponent implements OnInit {
 
   // --- EDIT GROUP MODAL ---
   openEditGroup(g: WhatsAppGroup) {
-    this.editingGroup = { ...g, active: g.active !== false };
+    this.editingGroup = {
+      ...g,
+      active: g.active !== false,
+      ml_tag: g.ml_tag || '',
+      shopee_subid: g.shopee_subid || '',
+      amazon_tag: g.amazon_tag || '',
+      magalu_store: g.magalu_store || '',
+      session_name: g.session_name || '',
+      is_monitored: !!g.is_monitored,
+      mirror_enabled: !!g.mirror_enabled,
+      target_whatsapp_groups: g.target_whatsapp_groups || []
+    };
     this.editingKeywordsInput = (g.keywords || []).join(', ');
+  }
+
+  isGroupTargetSelected(targetId: string): boolean {
+    if (!this.editingGroup?.target_whatsapp_groups) return false;
+    return this.editingGroup.target_whatsapp_groups.includes(targetId);
+  }
+
+  toggleGroupTarget(targetId: string) {
+    if (!this.editingGroup) return;
+    if (!this.editingGroup.target_whatsapp_groups) {
+      this.editingGroup.target_whatsapp_groups = [];
+    }
+    const idx = this.editingGroup.target_whatsapp_groups.indexOf(targetId);
+    if (idx >= 0) {
+      this.editingGroup.target_whatsapp_groups.splice(idx, 1);
+    } else {
+      this.editingGroup.target_whatsapp_groups.push(targetId);
+    }
   }
 
   saveGroupEdit() {
@@ -921,7 +1311,15 @@ export class DestinationsComponent implements OnInit {
       id: this.editingGroup.id.trim(),
       keywords: keywords,
       active: this.editingGroup.active !== false,
-      footer_text: this.editingGroup.footer_text?.trim() || ''
+      footer_text: this.editingGroup.footer_text?.trim() || '',
+      ml_tag: this.editingGroup.ml_tag?.trim() || '',
+      shopee_subid: this.editingGroup.shopee_subid?.trim() || '',
+      amazon_tag: this.editingGroup.amazon_tag?.trim() || '',
+      magalu_store: this.editingGroup.magalu_store?.trim() || '',
+      session_name: this.editingGroup.session_name?.trim() || '',
+      is_monitored: !!this.editingGroup.is_monitored,
+      mirror_enabled: !!this.editingGroup.mirror_enabled,
+      target_whatsapp_groups: this.editingGroup.target_whatsapp_groups || []
     }).subscribe({
       next: () => {
         this.editingGroup = null;
@@ -932,7 +1330,18 @@ export class DestinationsComponent implements OnInit {
 
   // --- NEW GROUP MODAL ---
   openNewGroupModal() {
-    this.newGroup = { name: '', id: '', footer_text: '' };
+    this.newGroup = {
+      name: '',
+      id: '',
+      footer_text: '',
+      ml_tag: '',
+      shopee_subid: '',
+      amazon_tag: '',
+      magalu_store: '',
+      session_name: '',
+      is_monitored: false,
+      mirror_enabled: false
+    };
     this.newKeywordsInput = '';
     this.showNewGroupModal = true;
   }
@@ -947,6 +1356,10 @@ export class DestinationsComponent implements OnInit {
       name: this.newGroup.name.trim(),
       id: this.newGroup.id.trim(),
       footer_text: this.newGroup.footer_text.trim(),
+      ml_tag: this.newGroup.ml_tag?.trim() || '',
+      shopee_subid: this.newGroup.shopee_subid?.trim() || '',
+      amazon_tag: this.newGroup.amazon_tag?.trim() || '',
+      magalu_store: this.newGroup.magalu_store?.trim() || '',
       keywords: keywords,
       active: true
     }).subscribe({
@@ -1033,6 +1446,82 @@ export class DestinationsComponent implements OnInit {
     this.telegramToDelete = null;
     this.api.deleteTelegramDestination(t.id_db || t.id).subscribe({
       next: () => this.loadAll()
+    });
+  }
+
+  // --- QUEUE METHODS ---
+  loadQueue() {
+    this.api.getQueueCounts().subscribe({
+      next: (counts: QueueCounts) => this.queueCounts = counts,
+      error: () => { }
+    });
+    this.api.getQueueItems(30).subscribe({
+      next: (items: QueueItem[]) => this.queueItems = items,
+      error: () => { }
+    });
+  }
+
+  dispatchNextQueue() {
+    this.queueBusy = true;
+    this.api.dispatchNextQueue().subscribe({
+      next: () => {
+        this.queueBusy = false;
+        this.loadQueue();
+      },
+      error: () => {
+        this.queueBusy = false;
+      }
+    });
+  }
+
+  trimQueue() {
+    this.api.trimQueue(20).subscribe({
+      next: () => this.loadQueue()
+    });
+  }
+
+  clearQueue() {
+    this.api.clearQueue().subscribe({
+      next: () => this.loadQueue()
+    });
+  }
+
+  // --- BROADCAST METHODS ---
+  addBroadcastTemplate() {
+    this.broadcastTemplates.push('');
+  }
+
+  removeBroadcastTemplate(index: number) {
+    if (this.broadcastTemplates.length > 1) {
+      this.broadcastTemplates.splice(index, 1);
+    }
+  }
+
+  startBroadcast() {
+    const validTemplates = this.broadcastTemplates.map(t => t.trim()).filter(t => t.length > 0);
+    if (validTemplates.length === 0) return;
+
+    this.broadcasting = true;
+    this.broadcastSuccessMessage = '';
+
+    this.api.wahaBroadcast({
+      session: this.broadcastSession,
+      templates: validTemplates,
+      min_participants: this.broadcastMinParticipants,
+      delay_seconds: this.broadcastDelay,
+      ignore_announce: this.broadcastIgnoreAnnounce,
+      mention_all: this.broadcastMentionAll
+    }).subscribe({
+      next: (res: any) => {
+        this.broadcasting = false;
+        this.broadcastSuccessMessage = `Campanha iniciada com sucesso! ${res.total_targets || 0} grupos adicionados à fila de disparo.`;
+        this.loadQueue();
+        setTimeout(() => this.broadcastSuccessMessage = '', 6000);
+      },
+      error: (err: any) => {
+        this.broadcasting = false;
+        this.broadcastSuccessMessage = `Erro ao iniciar campanha: ${err.message || 'Verifique se a sessão WAHA está ativa.'}`;
+      }
     });
   }
 }

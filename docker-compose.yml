@@ -1,5 +1,3 @@
-version: '3.8'
-
 # ==========================================
 # CasaOS App Store & Dashboard Metadata
 # ==========================================
@@ -33,7 +31,7 @@ services:
       POSTGRES_USER: pardal_user
       POSTGRES_PASSWORD: pardal_secure_pg_pass_2026
     volumes:
-      - /DATA/AppData/pardalflow/postgres:/var/lib/postgresql/data
+      - ${PARDAL_PG_PATH:-./data/postgres}:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h localhost -U pardal_user -d pardal_promohub"]
       interval: 10s
@@ -49,23 +47,23 @@ services:
             pt_br: "Porta do Banco de Dados PostgreSQL"
 
   backend:
+    build:
+      context: .
+      pull: false
     image: ghcr.io/arthurwallace/pardalflow:latest
     container_name: pardal_backend
     restart: unless-stopped
     ports:
       - "8085:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://pardal_user:pardal_secure_pg_pass_2026@postgres:5432/pardal_promohub
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - DATABASE_URL=${DATABASE_URL}
       - PORT=8000
       - HOST=0.0.0.0
-      - SECRET_KEY=pardal_super_secret_jwt_key_enterprise_2026_change_in_prod
-
+      - SECRET_KEY=${SECRET_KEY}
     volumes:
-      - /DATA/AppData/pardalflow/sessions:/app/backend/sessions
-      - /DATA/AppData/pardalflow/data:/app/backend/data
+      - ${PARDAL_SESSIONS_PATH:-./data/sessions}:/app/backend/sessions
+      - ${PARDAL_DATA_PATH:-./data/app_data}:/app/backend/data
     networks:
       - pardal_net
     x-casaos:

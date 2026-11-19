@@ -17,6 +17,7 @@ __pycache__/
 env/
 venv/
 ENV/
+fluxos_n8n/
 build/
 develop-eggs/
 downloads/

@@ -5,6 +5,7 @@ import time
 import logging
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+from urllib.parse import urlparse, urlunparse
 from sqlalchemy import (
     create_engine, Column, String, Integer, Boolean, Text, DateTime, Float, text
 )
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 Base = declarative_base()
 
 # ==========================================
-# SQLAlchemy Models for PostgreSQL / SQLite
+# SQLAlchemy Models for PostgreSQL
 # ==========================================
 
 class UserModel(Base):
@@ -106,6 +107,15 @@ class WhatsAppGroupModel(Base):
     keywords = Column(Text, default="[]")
     footer_text = Column(Text, default="")
     active = Column(Boolean, default=True)
+    ml_tag = Column(String(100), default="")
+    shopee_subid = Column(String(100), default="")
+    amazon_tag = Column(String(100), default="")
+    magalu_store = Column(String(100), default="")
+    session_name = Column(String(100), default="")
+    custom_template = Column(Text, default="")
+    is_monitored = Column(Boolean, default=False)
+    mirror_enabled = Column(Boolean, default=False)
+    target_whatsapp_groups = Column(Text, default="[]")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     def to_dict(self):
@@ -113,6 +123,10 @@ class WhatsAppGroupModel(Base):
             kw = json.loads(self.keywords)
         except Exception:
             kw = []
+        try:
+            targets = json.loads(self.target_whatsapp_groups) if self.target_whatsapp_groups else []
+        except Exception:
+            targets = []
         return {
             "_id": self.id,
             "id": self.group_id or self.id,
@@ -123,6 +137,15 @@ class WhatsAppGroupModel(Base):
             "keywords": kw,
             "footer_text": self.footer_text or "",
             "active": self.active,
+            "ml_tag": self.ml_tag or "",
+            "shopee_subid": self.shopee_subid or "",
+            "amazon_tag": self.amazon_tag or "",
+            "magalu_store": self.magalu_store or "",
+            "session_name": self.session_name or "",
+            "custom_template": self.custom_template or "",
+            "is_monitored": self.is_monitored if self.is_monitored is not None else False,
+            "mirror_enabled": self.mirror_enabled if self.mirror_enabled is not None else False,
+            "target_whatsapp_groups": targets,
             "created_at": self.created_at
         }
 
@@ -155,6 +178,8 @@ class WhatsAppSessionModel(Base):
     user_id = Column(String(64), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     active = Column(Boolean, default=True)
+    phone = Column(String(50), default="")
+    status = Column(String(50), default="STOPPED")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     def to_dict(self):
@@ -165,6 +190,8 @@ class WhatsAppSessionModel(Base):
             "user_id": self.user_id,
             "name": self.name,
             "active": self.active,
+            "phone": self.phone or "",
+            "status": self.status or "STOPPED",
             "created_at": self.created_at
         }
 
@@ -246,6 +273,146 @@ class LogModel(Base):
             "user_id": self.user_id,
             "timestamp": self.timestamp,
             "message": self.message
+        }
+
+class PlatformCookieModel(Base):
+    __tablename__ = "platform_cookies"
+    id = Column(String(64), primary_key=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    platform = Column(String(50), nullable=False, index=True) # mercadolivre, amazon, magalu, shopee
+    cookies = Column(Text, default="")
+    status = Column(String(50), default="unknown") # valid, expired, unknown
+    last_updated = Column(DateTime, default=datetime.utcnow)
+    extra_data = Column(Text, default="{}")
+
+    def to_dict(self):
+        try:
+            extra = json.loads(self.extra_data) if self.extra_data else {}
+        except Exception:
+            extra = {}
+        return {
+            "_id": self.id,
+            "id": self.id,
+            "user_id": self.user_id,
+            "platform": self.platform,
+            "cookies": self.cookies,
+            "status": self.status,
+            "last_updated": self.last_updated,
+            "extra_data": extra
+        }
+
+class MessageQueueModel(Base):
+    __tablename__ = "message_queue"
+    id = Column(String(64), primary_key=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    queue_type = Column(String(50), default="ofertas", index=True) # ofertas, cupons, vitrine, broadcast
+    payload = Column(Text, default="{}")
+    status = Column(String(50), default="pending", index=True) # pending, processing, sent, failed, paused
+    attempts = Column(Integer, default=0)
+    error_message = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    scheduled_for = Column(DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self):
+        try:
+            p = json.loads(self.payload) if self.payload else {}
+        except Exception:
+            p = {}
+        return {
+            "_id": self.id,
+            "id": self.id,
+            "user_id": self.user_id,
+            "queue_type": self.queue_type,
+            "payload": p,
+            "status": self.status,
+            "attempts": self.attempts,
+            "error_message": self.error_message,
+            "created_at": self.created_at,
+            "scheduled_for": self.scheduled_for
+        }
+
+class GroupEventModel(Base):
+    __tablename__ = "group_events"
+    id = Column(String(64), primary_key=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    group_id = Column(String(100), nullable=False, index=True)
+    group_name = Column(String(255), default="")
+    event_type = Column(String(50), nullable=False, index=True) # join, leave, add, remove
+    participant = Column(String(100), default="")
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self):
+        return {
+            "_id": self.id,
+            "id": self.id,
+            "user_id": self.user_id,
+            "group_id": self.group_id,
+            "group_name": self.group_name,
+            "event_type": self.event_type,
+            "participant": self.participant,
+            "timestamp": self.timestamp
+        }
+
+class VitrineProductModel(Base):
+    __tablename__ = "vitrine_products"
+    id = Column(String(64), primary_key=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    item_id = Column(String(100), default="", index=True)
+    shop_id = Column(String(100), default="", index=True)
+    title = Column(String(500), nullable=False)
+    price = Column(String(100), default="")
+    commission_rate = Column(Float, default=0.0)
+    commission_value = Column(Float, default=0.0)
+    image_url = Column(String(1000), default="")
+    product_url = Column(String(1000), default="")
+    affiliate_url = Column(String(1000), default="")
+    category = Column(String(100), default="noivas")
+    status = Column(String(50), default="active", index=True) # active, paused, posted
+    last_posted_at = Column(DateTime, default=None)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "_id": self.id,
+            "id": self.id,
+            "user_id": self.user_id,
+            "item_id": self.item_id,
+            "shop_id": self.shop_id,
+            "title": self.title,
+            "price": self.price,
+            "commission_rate": self.commission_rate,
+            "commission_value": self.commission_value,
+            "image_url": self.image_url,
+            "product_url": self.product_url,
+            "affiliate_url": self.affiliate_url,
+            "category": self.category,
+            "status": self.status,
+            "last_posted_at": self.last_posted_at,
+            "created_at": self.created_at
+        }
+
+class AffiliateMetricModel(Base):
+    __tablename__ = "affiliate_metrics"
+    id = Column(String(64), primary_key=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    platform = Column(String(50), nullable=False, index=True) # shopee, mercadolivre, amazon, magalu
+    metric_type = Column(String(50), nullable=False, index=True) # clicks, commission, sales
+    date = Column(DateTime, default=datetime.utcnow, index=True)
+    data = Column(Text, default="{}")
+
+    def to_dict(self):
+        try:
+            d = json.loads(self.data) if self.data else {}
+        except Exception:
+            d = {}
+        return {
+            "_id": self.id,
+            "id": self.id,
+            "user_id": self.user_id,
+            "platform": self.platform,
+            "metric_type": self.metric_type,
+            "date": self.date,
+            "data": d
         }
 
 # ==========================================
@@ -332,7 +499,7 @@ class TableCollection:
                 data["target_whatsapp_groups"] = data["whatsapp_destinations"]
 
             # Convert JSON serialized fields
-            for field in ("data", "target_whatsapp_groups", "target_groups", "keywords"):
+            for field in ("data", "target_whatsapp_groups", "target_groups", "keywords", "payload", "extra_data"):
                 if field in data and not isinstance(data[field], str):
                     data[field] = json.dumps(data[field], default=str)
 
@@ -374,7 +541,7 @@ class TableCollection:
                 if "whatsapp_destinations" in data and "target_whatsapp_groups" not in data:
                     data["target_whatsapp_groups"] = data["whatsapp_destinations"]
 
-                for field in ("data", "target_whatsapp_groups", "target_groups", "keywords"):
+                for field in ("data", "target_whatsapp_groups", "target_groups", "keywords", "payload", "extra_data"):
                     if field in data and not isinstance(data[field], str):
                         data[field] = json.dumps(data[field], default=str)
 
@@ -413,7 +580,7 @@ class TableCollection:
                 if "id_db" in init_data:
                     del init_data["id_db"]
 
-                for field in ("data", "target_whatsapp_groups", "target_groups", "keywords"):
+                for field in ("data", "target_whatsapp_groups", "target_groups", "keywords", "payload", "extra_data"):
                     if field in init_data and not isinstance(init_data[field], str):
                         init_data[field] = json.dumps(init_data[field])
 
@@ -425,7 +592,7 @@ class TableCollection:
                 for k, v in set_data.items():
                     if k in ("_id", "id", "id_db"):
                         continue
-                    if k in ("data", "target_whatsapp_groups", "target_groups", "keywords") and not isinstance(v, str):
+                    if k in ("data", "target_whatsapp_groups", "target_groups", "keywords", "payload", "extra_data") and not isinstance(v, str):
                         v = json.dumps(v)
                     if hasattr(instance, k):
                         setattr(instance, k, v)
@@ -546,91 +713,144 @@ class PostgresDB:
         self.sent_offers = TableCollection(SentOfferModel, session_factory)
         self.telegram_sessions = TableCollection(TelegramSessionModel, session_factory)
         self.logs = TableCollection(LogModel, session_factory)
+        self.platform_cookies = TableCollection(PlatformCookieModel, session_factory)
+        self.message_queue = TableCollection(MessageQueueModel, session_factory)
+        self.group_events = TableCollection(GroupEventModel, session_factory)
+        self.vitrine_products = TableCollection(VitrineProductModel, session_factory)
+        self.affiliate_metrics = TableCollection(AffiliateMetricModel, session_factory)
 
 _db_instance: Optional[PostgresDB] = None
 
+def _ensure_database_exists(db_url: str):
+    """
+    Verifica se o banco de dados de destino existe no PostgreSQL.
+    Caso não exista (ex: pardal_flow ou pardal_flow_dev), conecta ao banco 'postgres'
+    com AUTOCOMMIT e executa 'CREATE DATABASE <nome>' automaticamente.
+    """
+    try:
+        raw_url = db_url
+        if raw_url.startswith("postgresql+psycopg2://"):
+            raw_url = raw_url.replace("postgresql+psycopg2://", "postgresql://", 1)
+
+        parsed = urlparse(raw_url)
+        db_name = parsed.path.lstrip('/')
+        if '?' in db_name:
+            db_name = db_name.split('?')[0]
+
+        if not db_name or db_name.lower() in ('postgres', 'template1'):
+            return
+
+        admin_path = '/postgres'
+        admin_url = urlunparse((
+            parsed.scheme,
+            parsed.netloc,
+            admin_path,
+            '',
+            parsed.query,
+            ''
+        ))
+        if admin_url.startswith("postgresql://"):
+            admin_url = admin_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+
+        connect_args = {"connect_timeout": 5}
+        if "sslmode=require" in admin_url.lower():
+            connect_args["sslmode"] = "require"
+
+        admin_engine = create_engine(
+            admin_url,
+            isolation_level="AUTOCOMMIT",
+            connect_args=connect_args
+        )
+        with admin_engine.connect() as conn:
+            check_sql = text("SELECT 1 FROM pg_database WHERE datname = :dname")
+            exists = conn.execute(check_sql, {"dname": db_name}).fetchone()
+            if not exists:
+                logger.info(f"🛠️ Banco '{db_name}' não existe no PostgreSQL ({parsed.netloc}). Criando banco automaticamente...")
+                conn.execute(text(f'CREATE DATABASE "{db_name}"'))
+                logger.info(f"✅ Banco de dados '{db_name}' criado com sucesso no PostgreSQL!")
+        admin_engine.dispose()
+    except Exception as e:
+        logger.debug(f"Aviso na verificação automática de banco '{db_url}': {e}")
+
 def get_db() -> PostgresDB:
     """
-    Retorna a instância do banco de dados relacional.
-    - Em ambiente Docker/Produção (CasaOS): Conexão ESTRITA e exclusiva com PostgreSQL com loop de retry.
-    - Em ambiente de desenvolvimento local (Windows): Tenta PostgreSQL primeiro; se indisponível,
-      utiliza o SQLite local persistente (backend/pardal_promohub.db) para permitir execução imediata.
+    Retorna a instância do banco de dados relacional PostgreSQL.
+    Conecta de forma direta e estrita ao PostgreSQL configurado no .env (DATABASE_URL),
+    seja ele na nuvem (Cloudflare Hyperdrive / Neon / Supabase) ou local/Docker.
+    Elimina 100% qualquer uso ou dependência de arquivos SQLite locais (.db).
     """
     global _db_instance
     if _db_instance is not None:
         return _db_instance
 
-    is_docker = os.path.exists("/.dockerenv") or os.getenv("IS_DOCKER", "").lower() == "true" or os.getenv("ENVIRONMENT", "").lower() == "production"
-
     db_url = (os.getenv("DATABASE_URL") or settings.DATABASE_URL or "").strip()
     if not db_url:
-        pg_user = os.getenv("POSTGRES_USER") or settings.POSTGRES_USER or "pardal_user"
+        pg_user = os.getenv("POSTGRES_USER") or settings.POSTGRES_USER or "postgres"
         pg_pass = os.getenv("POSTGRES_PASSWORD") or settings.POSTGRES_PASSWORD or ""
-        pg_host = os.getenv("POSTGRES_HOST") or "postgres"
-        pg_port = os.getenv("POSTGRES_PORT") or "5432"
-        pg_db = os.getenv("POSTGRES_DB") or settings.POSTGRES_DB or "pardal_promohub"
+        pg_host = os.getenv("POSTGRES_HOST") or settings.POSTGRES_HOST or "localhost"
+        pg_port = os.getenv("POSTGRES_PORT") or settings.POSTGRES_PORT or "5432"
+        pg_db = os.getenv("POSTGRES_DB") or settings.POSTGRES_DB or "pardal_flow_dev"
         db_url = f"postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}"
+
+    # Garante que o banco exista antes de tentar conectar
+    _ensure_database_exists(db_url)
 
     # Ensure SQLAlchemy uses psycopg2 driver directly without requiring psycopg v3
     if db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
     masked_url = db_url.split('@')[-1] if '@' in db_url else db_url
+    logger.info(f"🐘 Conectando ao PostgreSQL ({masked_url})...")
+
+    max_retries = 3
+    retry_delay = 2
     engine = None
 
-    if is_docker:
-        logger.info(f"🐘 [PRODUÇÃO/DOCKER] Conectando ao PostgreSQL exclusivo: {masked_url}")
-        max_retries = 10
-        retry_delay = 2
-        for attempt in range(1, max_retries + 1):
-            try:
-                engine = create_engine(
-                    db_url,
-                    pool_pre_ping=True,
-                    pool_size=10,
-                    max_overflow=20,
-                    connect_args={"connect_timeout": 5}
-                )
-                with engine.connect() as conn:
-                    conn.execute(text("SELECT 1"))
-                Base.metadata.create_all(engine)
-                logger.info("✅ Conexão com PostgreSQL estabelecida com sucesso!")
-                break
-            except Exception as e:
-                if attempt < max_retries:
-                    logger.warning(f"Aguardando PostgreSQL ficar pronto... (tentativa {attempt}/{max_retries}): {e}")
-                    time.sleep(retry_delay)
-                else:
-                    logger.error(f"❌ FALHA CRÍTICA: Conexão obrigatória com PostgreSQL falhou após {max_retries} tentativas: {e}")
-                    raise RuntimeError(f"FALHA CRÍTICA: Conexão obrigatória com PostgreSQL falhou: {e}")
-    else:
-        # Ambiente de desenvolvimento local (Windows/Mac/Linux)
-        logger.info(f"🐘 [DEV LOCAL] Tentando conexão com PostgreSQL: {masked_url}")
+    for attempt in range(1, max_retries + 1):
         try:
-            temp_engine = create_engine(
+            connect_args = {"connect_timeout": 10}
+            if "sslmode=require" in db_url.lower() or "neon.tech" in db_url.lower() or "supabase" in db_url.lower():
+                connect_args["sslmode"] = "require"
+
+            engine = create_engine(
                 db_url,
                 pool_pre_ping=True,
-                pool_size=5,
-                max_overflow=10,
-                connect_args={"connect_timeout": 2}
+                pool_size=10,
+                max_overflow=20,
+                connect_args=connect_args
             )
-            with temp_engine.connect() as conn:
+            with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-            Base.metadata.create_all(temp_engine)
-            engine = temp_engine
-            logger.info("✅ [DEV LOCAL] Conectado ao PostgreSQL com sucesso!")
-        except Exception as e:
-            logger.warning(f"⚠️ [DEV LOCAL] PostgreSQL não disponível ({e}). Utilizando SQLite local persistente para desenvolvimento.")
-            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            sqlite_file = os.path.join(backend_dir, "pardal_promohub.db")
-            sqlite_path = f"sqlite:///{sqlite_file}"
-            engine = create_engine(
-                sqlite_path,
-                connect_args={"check_same_thread": False}
-            )
             Base.metadata.create_all(engine)
-            _ensure_sqlite_columns(engine)
-            logger.info(f"✅ [DEV LOCAL] Banco SQLite local conectado: {sqlite_file}")
+            # Garante que novas colunas adicionadas ao modelo existam no PostgreSQL
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE whatsapp_groups ADD COLUMN IF NOT EXISTS ml_tag VARCHAR(100) DEFAULT ''"))
+                    conn.execute(text("ALTER TABLE whatsapp_groups ADD COLUMN IF NOT EXISTS shopee_subid VARCHAR(100) DEFAULT ''"))
+                    conn.execute(text("ALTER TABLE whatsapp_groups ADD COLUMN IF NOT EXISTS amazon_tag VARCHAR(100) DEFAULT ''"))
+                    conn.execute(text("ALTER TABLE whatsapp_groups ADD COLUMN IF NOT EXISTS magalu_store VARCHAR(100) DEFAULT ''"))
+                    conn.execute(text("ALTER TABLE whatsapp_groups ADD COLUMN IF NOT EXISTS session_name VARCHAR(100) DEFAULT ''"))
+                    conn.execute(text("ALTER TABLE whatsapp_groups ADD COLUMN IF NOT EXISTS custom_template TEXT DEFAULT ''"))
+                    conn.execute(text("ALTER TABLE whatsapp_groups ADD COLUMN IF NOT EXISTS is_monitored BOOLEAN DEFAULT FALSE"))
+                    conn.execute(text("ALTER TABLE whatsapp_groups ADD COLUMN IF NOT EXISTS mirror_enabled BOOLEAN DEFAULT FALSE"))
+                    conn.execute(text("ALTER TABLE whatsapp_groups ADD COLUMN IF NOT EXISTS target_whatsapp_groups TEXT DEFAULT '[]'"))
+                    conn.execute(text("ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS phone VARCHAR(50) DEFAULT ''"))
+                    conn.execute(text("ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'STOPPED'"))
+                    conn.commit()
+            except Exception as e_col:
+                logger.debug(f"Aviso de verificação de colunas PostgreSQL: {e_col}")
+            logger.info("✅ Conexão com banco PostgreSQL estabelecida com sucesso!")
+            break
+        except Exception as e:
+            if attempt < max_retries:
+                logger.warning(f"⚠️ Tentativa {attempt}/{max_retries} de conexão com PostgreSQL falhou ({e}). Tentando novamente em {retry_delay}s...")
+                time.sleep(retry_delay)
+            else:
+                logger.error(f"❌ FALHA CRÍTICA: Não foi possível conectar ao banco PostgreSQL ({masked_url}): {e}")
+                raise RuntimeError(
+                    f"Falha de conexão com PostgreSQL ({masked_url}): {e}.\n"
+                    f"Verifique se o DATABASE_URL no .env (ou .env.development) aponta para um banco PostgreSQL válido (ex: Cloudflare Hyperdrive / Neon / Supabase)."
+                )
 
     session_factory = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
     _db_instance = PostgresDB(engine, session_factory)
@@ -638,32 +858,6 @@ def get_db() -> PostgresDB:
     # Auto-seed essential default user and channels if database is completely empty
     _ensure_initial_seed(_db_instance)
     return _db_instance
-
-def _ensure_sqlite_columns(engine):
-    """Garante que colunas criadas em versões recentes existam no banco SQLite local."""
-    try:
-        with engine.connect() as conn:
-            for table_name, table in Base.metadata.tables.items():
-                try:
-                    res = conn.execute(text(f"PRAGMA table_info('{table_name}')")).fetchall()
-                    existing_cols = {row[1] for row in res}
-                    if not existing_cols:
-                        continue
-                    for col in table.columns:
-                        if col.name not in existing_cols:
-                            col_type = "TEXT"
-                            if "int" in str(col.type).lower():
-                                col_type = "INTEGER"
-                            elif "bool" in str(col.type).lower():
-                                col_type = "BOOLEAN"
-                            alter_sql = f'ALTER TABLE "{table_name}" ADD COLUMN "{col.name}" {col_type}'
-                            conn.execute(text(alter_sql))
-                            conn.commit()
-                            logger.info(f"Coluna '{col.name}' adicionada à tabela SQLite '{table_name}'.")
-                except Exception as ex:
-                    logger.debug(f"Aviso sync SQLite tabela {table_name}: {ex}")
-    except Exception as e:
-        logger.debug(f"Aviso sync SQLite: {e}")
 
 
 def _ensure_initial_seed(db: PostgresDB):

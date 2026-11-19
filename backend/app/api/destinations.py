@@ -24,7 +24,16 @@ async def list_whatsapp_groups(current_user: dict = Depends(get_current_user)):
             id=d["id"],
             keywords=d.get("keywords", []),
             footer_text=d.get("footer_text", ""),
-            active=d.get("active", True)
+            active=d.get("active", True),
+            ml_tag=d.get("ml_tag", ""),
+            shopee_subid=d.get("shopee_subid", ""),
+            amazon_tag=d.get("amazon_tag", ""),
+            magalu_store=d.get("magalu_store", ""),
+            session_name=d.get("session_name", ""),
+            custom_template=d.get("custom_template", ""),
+            is_monitored=d.get("is_monitored", False),
+            mirror_enabled=d.get("mirror_enabled", False),
+            target_whatsapp_groups=d.get("target_whatsapp_groups", [])
         )
         for d in docs
     ]
@@ -42,7 +51,16 @@ async def create_whatsapp_group(grp: WhatsAppGroupCreate, current_user: dict = D
         "id": grp.id.strip(),
         "keywords": grp.keywords,
         "footer_text": grp.footer_text.strip() if grp.footer_text else "",
-        "active": grp.active
+        "active": grp.active,
+        "ml_tag": grp.ml_tag.strip() if grp.ml_tag else "",
+        "shopee_subid": grp.shopee_subid.strip() if grp.shopee_subid else "",
+        "amazon_tag": grp.amazon_tag.strip() if grp.amazon_tag else "",
+        "magalu_store": grp.magalu_store.strip() if grp.magalu_store else "",
+        "session_name": grp.session_name.strip() if grp.session_name else "",
+        "custom_template": grp.custom_template or "",
+        "is_monitored": grp.is_monitored,
+        "mirror_enabled": grp.mirror_enabled,
+        "target_whatsapp_groups": grp.target_whatsapp_groups or []
     }
     res = db.whatsapp_groups.insert_one(doc)
     doc["id_db"] = str(res.inserted_id)

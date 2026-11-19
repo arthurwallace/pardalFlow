@@ -1,0 +1,190 @@
+<div class="cookies-page">
+  <!-- HEADER -->
+  <div class="page-header">
+    <div>
+      <span class="category-tag">AFILIADOS & AUTOMAÇÃO</span>
+      <h1 class="main-title">Gerenciador de <span class="highlight-text">Cookies & Lojas</span></h1>
+      <p class="subtitle">
+        Gerencie os cookies de autenticação e sessão das plataformas (Mercado Livre, Amazon, Magalu e Shopee).
+        A plataforma utiliza esses cookies de forma 100% nativa para gerar links de afiliados e extrair comissões.
+      </p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="loadCookies()" [disabled]="loading">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon" [class.spin]="loading">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+        <span>Atualizar</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- WEBHOOK EXTENSION BANNER -->
+  <div class="card webhook-banner">
+    <div class="banner-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+      </svg>
+    </div>
+    <div class="banner-content">
+      <h3>Webhook para Extensão do Navegador</h3>
+      <p>
+        Configure sua extensão de cookies para enviar automaticamente para este endpoint nativo da plataforma:
+      </p>
+      <div class="webhook-url-box">
+        <code>{{ webhookUrl }}</code>
+        <button class="btn btn-copy" (click)="copyWebhookUrl()">
+          {{ copied ? 'Copiado!' : 'Copiar URL' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLATFORMS GRID -->
+  <div class="platforms-grid">
+    <!-- 1. MERCADO LIVRE -->
+    <div class="card platform-card">
+      <div class="card-header">
+        <div class="platform-meta">
+          <span class="platform-logo ml">ML</span>
+          <div>
+            <h2>Mercado Livre</h2>
+            <span class="badge" [class.badge-success]="mlCookie.has_cookies" [class.badge-warning]="!mlCookie.has_cookies">
+              {{ mlCookie.has_cookies ? 'Conectado & Válido' : 'Pendente de Cookies' }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <p class="card-desc">
+        Necessário para gerar links curtos (meli.la) via API oficial de afiliados e monitorar relatórios de vendas.
+      </p>
+      <div class="form-group">
+        <label>Cookies de Sessão (Cookie String):</label>
+        <textarea 
+          [(ngModel)]="mlCookie.cookies" 
+          rows="4" 
+          placeholder="Cole os cookies da sessão do Mercado Livre aqui..."
+          class="code-textarea"
+        ></textarea>
+      </div>
+      <div class="card-footer">
+        <span class="meta-time" *ngIf="mlCookie.last_updated">
+          Atualizado: {{ mlCookie.last_updated | date:'dd/MM/yyyy HH:mm' }}
+        </span>
+        <button class="btn btn-primary" (click)="savePlatform('mercadolivre', mlCookie.cookies)" [disabled]="saving">
+          <span>Salvar Cookies ML</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. AMAZON -->
+    <div class="card platform-card">
+      <div class="card-header">
+        <div class="platform-meta">
+          <span class="platform-logo amz">AMZ</span>
+          <div>
+            <h2>Amazon Associates</h2>
+            <span class="badge" [class.badge-success]="amzCookie.has_cookies" [class.badge-warning]="!amzCookie.has_cookies">
+              {{ amzCookie.has_cookies ? 'Conectado & Válido' : 'Pendente de Cookies' }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <p class="card-desc">
+        Utilizado pelo SiteStripe nativo para gerar short links oficiais da Amazon (amzn.to). Caso ausente, utiliza links canônicos com tag.
+      </p>
+      <div class="form-group">
+        <label>Cookies SiteStripe / Associados:</label>
+        <textarea 
+          [(ngModel)]="amzCookie.cookies" 
+          rows="4" 
+          placeholder="Cole os cookies da Amazon aqui..."
+          class="code-textarea"
+        ></textarea>
+      </div>
+      <div class="card-footer">
+        <span class="meta-time" *ngIf="amzCookie.last_updated">
+          Atualizado: {{ amzCookie.last_updated | date:'dd/MM/yyyy HH:mm' }}
+        </span>
+        <button class="btn btn-primary" (click)="savePlatform('amazon', amzCookie.cookies)" [disabled]="saving">
+          <span>Salvar Cookies Amazon</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. MAGAZINE LUIZA -->
+    <div class="card platform-card">
+      <div class="card-header">
+        <div class="platform-meta">
+          <span class="platform-logo magalu">MAG</span>
+          <div>
+            <h2>Magazine Luiza</h2>
+            <span class="badge" [class.badge-success]="magaluCookie.has_cookies" [class.badge-warning]="!magaluCookie.has_cookies">
+              {{ magaluCookie.has_cookies ? 'Ativo' : 'Opcional / Pendente' }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <p class="card-desc">
+        Integração nativa com a API Magazine Você onelink para encurtar links de vitrines parceiras.
+      </p>
+      <div class="form-group">
+        <label>Cookies de Sessão Magalu:</label>
+        <textarea 
+          [(ngModel)]="magaluCookie.cookies" 
+          rows="4" 
+          placeholder="Cole os cookies da Magazine Luiza aqui..."
+          class="code-textarea"
+        ></textarea>
+      </div>
+      <div class="card-footer">
+        <span class="meta-time" *ngIf="magaluCookie.last_updated">
+          Atualizado: {{ magaluCookie.last_updated | date:'dd/MM/yyyy HH:mm' }}
+        </span>
+        <button class="btn btn-primary" (click)="savePlatform('magalu', magaluCookie.cookies)" [disabled]="saving">
+          <span>Salvar Cookies Magalu</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 4. SHOPEE -->
+    <div class="card platform-card">
+      <div class="card-header">
+        <div class="platform-meta">
+          <span class="platform-logo shopee">SHP</span>
+          <div>
+            <h2>Shopee Afiliados</h2>
+            <span class="badge badge-success">API Oficial Ativa</span>
+          </div>
+        </div>
+      </div>
+      <p class="card-desc">
+        A Shopee opera primariamente via chaves Open API GraphQL (App ID & Secret), configuradas na aba de Configurações.
+      </p>
+      <div class="form-group">
+        <label>Cookies Adicionais de Sessão (Opcional):</label>
+        <textarea 
+          [(ngModel)]="shopeeCookie.cookies" 
+          rows="4" 
+          placeholder="Cookies opcionais para scraping da Shopee..."
+          class="code-textarea"
+        ></textarea>
+      </div>
+      <div class="card-footer">
+        <span class="meta-time" *ngIf="shopeeCookie.last_updated">
+          Atualizado: {{ shopeeCookie.last_updated | date:'dd/MM/yyyy HH:mm' }}
+        </span>
+        <button class="btn btn-primary" (click)="savePlatform('shopee', shopeeCookie.cookies)" [disabled]="saving">
+          <span>Salvar Shopee</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUCCESS / ERROR TOAST -->
+  <div *ngIf="toastMsg" class="toast" [class.toast-success]="toastSuccess" [class.toast-error]="!toastSuccess">
+    {{ toastMsg }}
+  </div>
+</div>

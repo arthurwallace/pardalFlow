@@ -6,10 +6,13 @@ import { RegisterComponent } from './pages/register/register.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { ChannelsComponent } from './pages/channels/channels.component';
 import { DestinationsComponent } from './pages/destinations/destinations.component';
+import { WhatsappComponent } from './pages/whatsapp/whatsapp.component';
 import { SettingsComponent } from './pages/settings/settings.component';
 import { TesterComponent } from './pages/tester/tester.component';
 import { AnalyticsComponent } from './pages/analytics/analytics.component';
 import { LogsComponent } from './pages/logs/logs.component';
+import { CookiesComponent } from './pages/cookies/cookies.component';
+import { VitrineComponent } from './pages/vitrine/vitrine.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -22,7 +25,10 @@ export const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: DashboardComponent },
       { path: 'channels', component: ChannelsComponent },
-      { path: 'destinations', component: DestinationsComponent },
+      { path: 'whatsapp', component: WhatsappComponent },
+      { path: 'destinations', component: WhatsappComponent },
+      { path: 'cookies', component: CookiesComponent },
+      { path: 'vitrine', component: VitrineComponent },
       { path: 'settings', component: SettingsComponent },
       { path: 'tester', component: TesterComponent },
       { path: 'analytics', component: AnalyticsComponent },

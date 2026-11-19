@@ -17,7 +17,12 @@ from fastapi.responses import FileResponse
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.api import auth, channels, destinations, settings as settings_api, bot, tester, metrics, analytics, backup
+from app.services.internal_scheduler import scheduler_instance
+from app.api import (
+    auth, channels, destinations, settings as settings_api,
+    bot, tester, metrics, analytics, backup,
+    cookies, waha, queue as queue_api, reports, vitrine
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +39,9 @@ async def lifespan(app: FastAPI):
             print("[Startup] Banco de dados pronto e sincronizado.")
         except Exception:
             pass
+    scheduler_instance.start()
     yield
+    scheduler_instance.stop()
     try:
         print("[Shutdown] Encerrando Pardal PromoHub Backend...")
     except Exception:
@@ -68,6 +75,11 @@ app.include_router(tester.router, prefix=api_v1)
 app.include_router(metrics.router, prefix=api_v1)
 app.include_router(analytics.router, prefix=api_v1)
 app.include_router(backup.router, prefix=api_v1)
+app.include_router(cookies.router, prefix=api_v1)
+app.include_router(waha.router, prefix=api_v1)
+app.include_router(queue_api.router, prefix=api_v1)
+app.include_router(reports.router, prefix=api_v1)
+app.include_router(vitrine.router, prefix=api_v1)
 
 @app.get("/health", tags=["Health"])
 async def health_check():

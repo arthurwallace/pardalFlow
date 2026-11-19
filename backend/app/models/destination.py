@@ -8,6 +8,15 @@ class WhatsAppGroupBase(BaseModel):
     keywords: List[str] = []
     footer_text: Optional[str] = ""
     active: bool = True
+    ml_tag: Optional[str] = ""
+    shopee_subid: Optional[str] = ""
+    amazon_tag: Optional[str] = ""
+    magalu_store: Optional[str] = ""
+    session_name: Optional[str] = ""
+    custom_template: Optional[str] = ""
+    is_monitored: bool = False
+    mirror_enabled: bool = False
+    target_whatsapp_groups: List[str] = []
 
 class WhatsAppGroupCreate(WhatsAppGroupBase):
     pass
@@ -18,6 +27,15 @@ class WhatsAppGroupUpdate(BaseModel):
     keywords: Optional[List[str]] = None
     footer_text: Optional[str] = None
     active: Optional[bool] = None
+    ml_tag: Optional[str] = None
+    shopee_subid: Optional[str] = None
+    amazon_tag: Optional[str] = None
+    magalu_store: Optional[str] = None
+    session_name: Optional[str] = None
+    custom_template: Optional[str] = None
+    is_monitored: Optional[bool] = None
+    mirror_enabled: Optional[bool] = None
+    target_whatsapp_groups: Optional[List[str]] = None
 
 class WhatsAppGroupResponse(WhatsAppGroupBase):
     id_db: str
@@ -41,10 +59,12 @@ class TelegramDestResponse(TelegramDestBase):
     id_db: str
     user_id: str
 
-# WhatsApp Sessions (Round-Robin)
+# WhatsApp Sessions (Round-Robin & WAHA Instances)
 class WhatsAppSessionBase(BaseModel):
     name: str = Field(..., description="Session identifier e.g. WHATS_BUSSINESS_01")
     active: bool = True
+    phone: Optional[str] = ""
+    status: Optional[str] = "STOPPED"
 
 class WhatsAppSessionCreate(WhatsAppSessionBase):
     pass
@@ -52,6 +72,8 @@ class WhatsAppSessionCreate(WhatsAppSessionBase):
 class WhatsAppSessionUpdate(BaseModel):
     name: Optional[str] = None
     active: Optional[bool] = None
+    phone: Optional[str] = None
+    status: Optional[str] = None
 
 class WhatsAppSessionResponse(WhatsAppSessionBase):
     id_db: str

@@ -1,0 +1,291 @@
+<div class="app-container">
+  <!-- MOBILE BACKDROP OVERLAY -->
+  <div 
+    *ngIf="mobileSidebarOpen" 
+    class="mobile-sidebar-backdrop" 
+    (click)="closeMobileSidebar()"
+  ></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" [class.mobile-open]="mobileSidebarOpen">
+    <!-- BRAND -->
+    <div class="sidebar-brand">
+      <div class="brand-logo-wrap">
+        <div class="brand-icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="brand-icon-svg">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">PARDAL<span class="highlight">FLOW</span></span>
+          <span class="brand-tagline">Automatize. Gerencie. Escale.</span>
+        </div>
+      </div>
+      <button class="mobile-close-btn" (click)="closeMobileSidebar()" title="Fechar menu">✕</button>
+    </div>
+
+    <!-- NAVIGATION -->
+    <nav class="sidebar-nav">
+      <!-- DASHBOARD (DIRECT LINK) -->
+      <div class="nav-item">
+        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" (click)="closeMobileSidebar()" class="nav-link">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          <span>Dashboard</span>
+        </a>
+      </div>
+
+      <!-- CENTRAL WHATSAPP (DIRECT LINK) -->
+      <div class="nav-item">
+        <a routerLink="/whatsapp" routerLinkActive="active" (click)="closeMobileSidebar()" class="nav-link nav-link-featured">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+            <line x1="12" y1="18" x2="12.01" y2="18"/>
+          </svg>
+          <span>Central WhatsApp</span>
+          <span class="badge-new">NOVO</span>
+        </a>
+      </div>
+
+      <!-- GROUP 1: CANAIS & PRODUTOS -->
+      <div class="nav-group">
+        <button type="button" class="nav-group-header" (click)="toggleGroup('channels')">
+          <div class="group-title-wrap">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            <span>Canais & Produtos</span>
+          </div>
+          <svg class="chevron-icon" [class.rotated]="openGroups['channels']" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+        <div class="nav-sub-items" *ngIf="openGroups['channels']">
+          <a routerLink="/channels" routerLinkActive="active" (click)="closeMobileSidebar()" class="sub-link">
+            <span class="sub-dot"></span>
+            <span>Canais Telegram</span>
+          </a>
+          <a routerLink="/vitrine" routerLinkActive="active" (click)="closeMobileSidebar()" class="sub-link">
+            <span class="sub-dot"></span>
+            <span>Vitrine de Produtos & Ofertas</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- GROUP 2: MENSAGENS & CONTEÚDO -->
+      <div class="nav-group">
+        <button type="button" class="nav-group-header" (click)="toggleGroup('content')">
+          <div class="group-title-wrap">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+            <span>Mensagens & Conteúdo</span>
+          </div>
+          <svg class="chevron-icon" [class.rotated]="openGroups['content']" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+        <div class="nav-sub-items" *ngIf="openGroups['content']">
+          <a [routerLink]="['/settings']" [queryParams]="{tab: 'templates'}" routerLinkActive="active" (click)="closeMobileSidebar()" class="sub-link">
+            <span class="sub-dot"></span>
+            <span>Modelos de Mensagens</span>
+          </a>
+          <a [routerLink]="['/settings']" [queryParams]="{tab: 'ai'}" routerLinkActive="active" (click)="closeMobileSidebar()" class="sub-link">
+            <span class="sub-dot"></span>
+            <span>Reescrita com IA</span>
+          </a>
+          <a [routerLink]="['/settings']" [queryParams]="{tab: 'blacklist'}" routerLinkActive="active" (click)="closeMobileSidebar()" class="sub-link">
+            <span class="sub-dot"></span>
+            <span>Filtros & Palavras Bloqueadas</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- GROUP 3: CONEXÕES & INTEGRAÇÕES -->
+      <div class="nav-group">
+        <button type="button" class="nav-group-header" (click)="toggleGroup('integrations')">
+          <div class="group-title-wrap">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+            <span>Conexões & Integrações</span>
+          </div>
+          <svg class="chevron-icon" [class.rotated]="openGroups['integrations']" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+        <div class="nav-sub-items" *ngIf="openGroups['integrations']">
+          <a routerLink="/cookies" routerLinkActive="active" (click)="closeMobileSidebar()" class="sub-link">
+            <span class="sub-dot"></span>
+            <span>Cookies & Contas de Afiliados</span>
+          </a>
+          <a [routerLink]="['/settings']" [queryParams]="{tab: 'telegram'}" routerLinkActive="active" (click)="closeMobileSidebar()" class="sub-link">
+            <span class="sub-dot"></span>
+            <span>Conexão Telegram (Sessão)</span>
+          </a>
+          <a [routerLink]="['/settings']" [queryParams]="{tab: 'credentials'}" routerLinkActive="active" (click)="closeMobileSidebar()" class="sub-link">
+            <span class="sub-dot"></span>
+            <span>Chaves de APIs & Tokens</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- GROUP 4: RELATÓRIOS & VENDAS -->
+      <div class="nav-group">
+        <button type="button" class="nav-group-header" (click)="toggleGroup('reports')">
+          <div class="group-title-wrap">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            <span>Relatórios & Vendas</span>
+          </div>
+          <svg class="chevron-icon" [class.rotated]="openGroups['reports']" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+        <div class="nav-sub-items" *ngIf="openGroups['reports']">
+          <a [routerLink]="['/analytics']" [queryParams]="{mode: 'affiliates'}" routerLinkActive="active" (click)="closeMobileSidebar()" class="sub-link">
+            <span class="sub-dot"></span>
+            <span>Comissões Shopee & ML</span>
+          </a>
+          <a [routerLink]="['/analytics']" [queryParams]="{mode: 'groups'}" routerLinkActive="active" (click)="closeMobileSidebar()" class="sub-link">
+            <span class="sub-dot"></span>
+            <span>Monitor de Grupos WhatsApp</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- GROUP 5: FERRAMENTAS & SISTEMA -->
+      <div class="nav-group">
+        <button type="button" class="nav-group-header" (click)="toggleGroup('system')">
+          <div class="group-title-wrap">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span>Ferramentas & Sistema</span>
+          </div>
+          <svg class="chevron-icon" [class.rotated]="openGroups['system']" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+        <div class="nav-sub-items" *ngIf="openGroups['system']">
+          <a routerLink="/tester" routerLinkActive="active" (click)="closeMobileSidebar()" class="sub-link">
+            <span class="sub-dot"></span>
+            <span>Simulador de Envio</span>
+          </a>
+          <a routerLink="/logs" routerLinkActive="active" (click)="closeMobileSidebar()" class="sub-link">
+            <span class="sub-dot"></span>
+            <span>Logs do Sistema</span>
+          </a>
+          <a [routerLink]="['/settings']" [queryParams]="{tab: 'backup'}" routerLinkActive="active" (click)="closeMobileSidebar()" class="sub-link">
+            <span class="sub-dot"></span>
+            <span>Backup & Restauração</span>
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- PROMO CARD BOTTOM -->
+    <div class="sidebar-promo-card">
+      <div class="promo-brand">PARDAL<span>FLOW</span></div>
+      <div class="promo-title">Mais ofertas.</div>
+      <div class="promo-sub">Mais resultados. Mais liberdade.</div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT WRAPPER -->
+  <div class="content-wrapper">
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <!-- MOBILE HAMBURGER BUTTON -->
+      <button class="btn-mobile-menu" (click)="toggleMobileSidebar()" title="Abrir menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hamburger-icon">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+
+      <!-- MOBILE BRAND LOGO (visible on small screens) -->
+      <div class="mobile-brand-title">
+        <span>PARDAL<span class="highlight">FLOW</span></span>
+      </div>
+
+      <!-- SEARCH BOX (Desktop) -->
+      <div class="topbar-search">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="Cole um link ou produto para simular a oferta..." (focus)="goToTester()">
+        <span class="search-shortcut">⌘K</span>
+      </div>
+
+      <!-- TOPBAR MOTTO (Desktop) -->
+      <div class="topbar-motto">
+        <span class="motto-logo">PARDALFLOW</span>
+        <span class="motto-text">Mais automações. Mais vendas. Mais liberdade.</span>
+      </div>
+
+      <!-- TOPBAR RIGHT -->
+      <div class="topbar-right">
+        <!-- BOT STATUS PILL -->
+        <div class="status-pill" [class.online]="isBotRunning" (click)="toggleBot()" [title]="(isBotRunning ? 'Bot Ativo • ' : 'Bot Pausado • ') + 'Sessão: ' + sessionName">
+          <span class="status-indicator"></span>
+          <span class="status-text">{{ isBotRunning ? 'Bot Ativo' : 'Bot Pausado' }}</span>
+        </div>
+
+        <!-- THEME SWITCHER -->
+        <button (click)="theme.toggleTheme()" class="topbar-action-btn" title="Alternar tema Claro / Escuro">
+          <svg *ngIf="theme.darkMode()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="theme-icon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          <svg *ngIf="!theme.darkMode()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="theme-icon"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        </button>
+
+        <!-- NOTIFICATIONS BELL -->
+        <div class="notif-wrap">
+          <button class="topbar-action-btn" (click)="toggleNotifications()" title="Ver notificações">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="notif-icon"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <span *ngIf="unreadCount > 0" class="notif-badge">{{ unreadCount }}</span>
+          </button>
+
+          <!-- DROPDOWN POPOVER -->
+          <div *ngIf="showNotifications" class="notif-dropdown card">
+            <div class="notif-header">
+              <h3>Notificações</h3>
+              <button class="btn-clear-notif" (click)="clearNotifications()">Limpar</button>
+            </div>
+            <div class="notif-list">
+              <div *ngFor="let n of notifications" class="notif-item">
+                <span class="notif-dot" [class.green]="n.type === 'success'" [class.blue]="n.type === 'info'" [class.yellow]="n.type === 'warning'"></span>
+                <div class="notif-content">
+                  <span class="notif-title">{{ n.title }}</span>
+                  <p class="notif-desc">{{ n.description }}</p>
+                  <span class="notif-time">{{ n.time }}</span>
+                </div>
+              </div>
+              <div *ngIf="notifications.length === 0" class="notif-empty">
+                Nenhuma notificação pendente.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- USER PROFILE -->
+        <div class="user-profile-widget">
+          <div class="user-avatar-circle">
+            {{ userInitial }}
+          </div>
+          <span class="user-fullname">{{ userName }}</span>
+          <button (click)="logout()" class="logout-link-btn" title="Sair da plataforma">
+            Sair
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ROUTER OUTLET -->
+    <main class="page-content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+
+  <!-- MOBILE BOTTOM NAVIGATION (Fixed at bottom for phones) -->
+  <nav class="mobile-bottom-bar">
+    <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      <span>Dashboard</span>
+    </a>
+    <a routerLink="/channels" routerLinkActive="active" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+      <span>Canais</span>
+    </a>
+    <a routerLink="/whatsapp" routerLinkActive="active" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+      <span>WhatsApp</span>
+    </a>
+    <a routerLink="/tester" routerLinkActive="active" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      <span>Simulador</span>
+    </a>
+    <button type="button" class="bottom-nav-item" (click)="toggleMobileSidebar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      <span>Mais</span>
+    </button>
+  </nav>
+</div>

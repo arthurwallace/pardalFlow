@@ -17,218 +17,7 @@ interface SystemNotification {
   selector: 'app-layout',
   standalone: true,
   imports: [CommonModule, RouterModule],
-  template: `
-    <div class="app-container">
-      <!-- MOBILE BACKDROP OVERLAY -->
-      <div 
-        *ngIf="mobileSidebarOpen" 
-        class="mobile-sidebar-backdrop" 
-        (click)="closeMobileSidebar()"
-      ></div>
-
-      <!-- SIDEBAR -->
-      <aside class="sidebar" [class.mobile-open]="mobileSidebarOpen">
-        <!-- BRAND -->
-        <div class="sidebar-brand">
-          <div class="brand-logo-wrap">
-            <div class="brand-icon-box">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="brand-icon-svg">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-              </svg>
-            </div>
-            <div class="brand-text">
-              <span class="brand-name">PARDAL<span class="highlight">FLOW</span></span>
-              <span class="brand-tagline">Automatize. Gerencie. Escale.</span>
-            </div>
-          </div>
-          <button class="mobile-close-btn" (click)="closeMobileSidebar()" title="Fechar menu">✕</button>
-        </div>
-
-        <!-- NAVIGATION -->
-        <nav class="sidebar-nav">
-          <!-- DASHBOARD -->
-          <div class="nav-item">
-            <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" (click)="closeMobileSidebar()" class="nav-link">
-              <svg class="nav-icon icon-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-              <span>Dashboard</span>
-            </a>
-          </div>
-
-          <!-- ESPELHAR CANAIS -->
-          <div class="nav-item">
-            <a routerLink="/channels" routerLinkActive="active" (click)="closeMobileSidebar()" class="nav-link">
-              <svg class="nav-icon icon-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-              <span>Espelhar canais</span>
-            </a>
-          </div>
-
-          <!-- DESTINOS & WHATSAPP -->
-          <div class="nav-item">
-            <a routerLink="/destinations" routerLinkActive="active" (click)="closeMobileSidebar()" class="nav-link">
-              <svg class="nav-icon icon-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-              <span>Destinos & WhatsApp</span>
-            </a>
-          </div>
-
-          <!-- MEUS TEXTOS & IA -->
-          <div class="nav-item">
-            <a routerLink="/settings" routerLinkActive="active" (click)="closeMobileSidebar()" class="nav-link">
-              <svg class="nav-icon icon-purple" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
-              <span>Meus textos & IA</span>
-            </a>
-          </div>
-
-          <!-- MONITOR DE ENTRADAS E SAÍDAS -->
-          <div class="nav-item">
-            <a routerLink="/analytics" routerLinkActive="active" (click)="closeMobileSidebar()" class="nav-link">
-              <svg class="nav-icon icon-yellow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-              <span>Monitor de Grupos</span>
-            </a>
-          </div>
-
-          <!-- SIMULADOR & ENVIAR MENSAGENS -->
-          <div class="nav-item">
-            <a routerLink="/tester" routerLinkActive="active" (click)="closeMobileSidebar()" class="nav-link">
-              <svg class="nav-icon icon-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-              <span>Simulador de Envio</span>
-            </a>
-          </div>
-
-          <!-- LOGS E AUDITORIA -->
-          <div class="nav-item">
-            <a routerLink="/logs" routerLinkActive="active" (click)="closeMobileSidebar()" class="nav-link">
-              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              <span>Logs do sistema</span>
-            </a>
-          </div>
-        </nav>
-
-        <!-- PROMO CARD BOTTOM -->
-        <div class="sidebar-promo-card">
-          <div class="promo-brand">PARDAL<span>FLOW</span></div>
-          <div class="promo-title">Mais ofertas.</div>
-          <div class="promo-sub">Mais resultados. Mais liberdade.</div>
-        </div>
-      </aside>
-
-      <!-- MAIN CONTENT WRAPPER -->
-      <div class="content-wrapper">
-        <!-- TOPBAR -->
-        <header class="topbar">
-          <!-- MOBILE HAMBURGER BUTTON -->
-          <button class="btn-mobile-menu" (click)="toggleMobileSidebar()" title="Abrir menu">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hamburger-icon">
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-          </button>
-
-          <!-- MOBILE BRAND LOGO (visible on small screens) -->
-          <div class="mobile-brand-title">
-            <span>PARDAL<span class="highlight">FLOW</span></span>
-          </div>
-
-          <!-- SEARCH BOX (Desktop) -->
-          <div class="topbar-search">
-            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="text" placeholder="Cole um link ou produto para simular a oferta..." (focus)="goToTester()">
-            <span class="search-shortcut">⌘K</span>
-          </div>
-
-          <!-- TOPBAR MOTTO (Desktop) -->
-          <div class="topbar-motto">
-            <span class="motto-logo">PARDALFLOW</span>
-            <span class="motto-text">Mais automações. Mais vendas. Mais liberdade.</span>
-          </div>
-
-          <!-- TOPBAR RIGHT -->
-          <div class="topbar-right">
-            <!-- BOT STATUS PILL -->
-            <div class="status-pill" [class.online]="isBotRunning" (click)="toggleBot()" [title]="(isBotRunning ? 'Bot Ativo • ' : 'Bot Pausado • ') + 'Sessão: ' + sessionName">
-              <span class="status-indicator"></span>
-              <span class="status-text">{{ isBotRunning ? 'Bot Ativo' : 'Bot Pausado' }}</span>
-            </div>
-
-            <!-- THEME SWITCHER -->
-            <button (click)="theme.toggleTheme()" class="topbar-action-btn" title="Alternar tema Claro / Escuro">
-              <svg *ngIf="theme.darkMode()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="theme-icon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-              <svg *ngIf="!theme.darkMode()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="theme-icon"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-            </button>
-
-            <!-- NOTIFICATIONS BELL -->
-            <div class="notif-wrap">
-              <button class="topbar-action-btn" (click)="toggleNotifications()" title="Ver notificações">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="notif-icon"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-                <span *ngIf="unreadCount > 0" class="notif-badge">{{ unreadCount }}</span>
-              </button>
-
-              <!-- DROPDOWN POPOVER -->
-              <div *ngIf="showNotifications" class="notif-dropdown card">
-                <div class="notif-header">
-                  <h3>Notificações</h3>
-                  <button class="btn-clear-notif" (click)="clearNotifications()">Limpar</button>
-                </div>
-                <div class="notif-list">
-                  <div *ngFor="let n of notifications" class="notif-item">
-                    <span class="notif-dot" [class.green]="n.type === 'success'" [class.blue]="n.type === 'info'" [class.yellow]="n.type === 'warning'"></span>
-                    <div class="notif-content">
-                      <span class="notif-title">{{ n.title }}</span>
-                      <p class="notif-desc">{{ n.description }}</p>
-                      <span class="notif-time">{{ n.time }}</span>
-                    </div>
-                  </div>
-                  <div *ngIf="notifications.length === 0" class="notif-empty">
-                    Nenhuma notificação pendente.
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- USER PROFILE -->
-            <div class="user-profile-widget">
-              <div class="user-avatar-circle">
-                {{ userInitial }}
-              </div>
-              <span class="user-fullname">{{ userName }}</span>
-              <button (click)="logout()" class="logout-link-btn" title="Sair da plataforma">
-                Sair
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <!-- ROUTER OUTLET -->
-        <main class="page-content">
-          <router-outlet></router-outlet>
-        </main>
-      </div>
-
-      <!-- MOBILE BOTTOM NAVIGATION (Fixed at bottom for phones) -->
-      <nav class="mobile-bottom-bar">
-        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="bottom-nav-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-          <span>Dashboard</span>
-        </a>
-        <a routerLink="/channels" routerLinkActive="active" class="bottom-nav-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-          <span>Canais</span>
-        </a>
-        <a routerLink="/destinations" routerLinkActive="active" class="bottom-nav-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-          <span>Destinos</span>
-        </a>
-        <a routerLink="/tester" routerLinkActive="active" class="bottom-nav-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-          <span>Simulador</span>
-        </a>
-        <button type="button" class="bottom-nav-item" (click)="toggleMobileSidebar()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-          <span>Mais</span>
-        </button>
-      </nav>
-    </div>
-  `,
+  templateUrl: './layout.component.html',
   styles: [`
     .app-container {
       display: flex;
@@ -336,6 +125,118 @@ interface SystemNotification {
       color: var(--accent-teal);
     }
 
+    .nav-link-featured {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .badge-new {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+      margin-left: auto;
+    }
+
+    /* COLLAPSIBLE NAV GROUPS */
+    .nav-group {
+      margin-bottom: 0.35rem;
+    }
+
+    .nav-group-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.55rem 0.75rem;
+      border-radius: var(--radius-md);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      transition: all var(--transition-fast);
+    }
+
+    .nav-group-header:hover {
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .group-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .chevron-icon {
+      width: 14px !important;
+      height: 14px !important;
+      color: var(--text-muted);
+      transition: transform 200ms ease;
+    }
+
+    .chevron-icon.rotated {
+      transform: rotate(90deg);
+      color: var(--accent-cyan);
+    }
+
+    .nav-sub-items {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      margin-left: 0.9rem;
+      padding-left: 0.65rem;
+      border-left: 1px solid var(--border-color);
+      margin-top: 0.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .sub-link {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.45rem 0.65rem;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 0.825rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all var(--transition-fast);
+    }
+
+    .sub-link:hover {
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .sub-link.active {
+      color: var(--text-primary);
+      background-color: rgba(56, 189, 248, 0.12);
+      font-weight: 700;
+    }
+
+    .sub-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background-color: var(--text-muted);
+      transition: all var(--transition-fast);
+    }
+
+    .sub-link:hover .sub-dot,
+    .sub-link.active .sub-dot {
+      background-color: var(--accent-cyan);
+      box-shadow: 0 0 6px var(--accent-cyan);
+    }
+
     .nav-icon {
       width: 17px !important;
       height: 17px !important;
@@ -352,6 +253,8 @@ interface SystemNotification {
     .icon-blue { color: #3b82f6 !important; }
     .icon-purple { color: #a855f7 !important; }
     .icon-yellow { color: #f59e0b !important; }
+    .icon-orange { color: #f97316 !important; }
+    .icon-pink { color: #ec4899 !important; }
 
     /* PROMO CARD */
     .sidebar-promo-card {
@@ -856,11 +759,24 @@ export class LayoutComponent implements OnInit, OnDestroy {
   userName = 'Usuário';
   userInitial = 'U';
 
+  // Collapsible Accordion Navigation Groups
+  openGroups: { [key: string]: boolean } = {
+    channels: true,
+    content: true,
+    integrations: true,
+    reports: false,
+    system: false
+  };
+
+  toggleGroup(group: string) {
+    this.openGroups[group] = !this.openGroups[group];
+  }
+
   showNotifications = false;
   notifications: SystemNotification[] = [
     { id: '1', title: 'Telegram Conectado', description: 'Sessão do Telegram ativa e conectada.', time: 'Há 5 min', type: 'success' },
-    { id: '2', title: 'Webhook Noivas Sincronizado', description: '2.016 participantes rastreados via n8n.', time: 'Há 12 min', type: 'info' },
-    { id: '3', title: '30 Canais Prontos', description: 'Filtros e tags de afiliados configurados.', time: 'Hoje', type: 'success' }
+    { id: '2', title: 'WhatsApp Conectado', description: 'Chips e grupos sincronizados via WAHA.', time: 'Há 12 min', type: 'info' },
+    { id: '3', title: 'Canais Prontos', description: 'Filtros e tags de afiliados configurados por grupo.', time: 'Hoje', type: 'success' }
   ];
 
   get unreadCount(): number {

@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { Settings } from '../../core/models';
 
@@ -8,424 +9,7 @@ import { Settings } from '../../core/models';
   selector: 'app-settings',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <div class="settings-page">
-      <!-- HEADER CATEGORY & TITLE -->
-      <div class="page-header">
-        <div>
-          <span class="category-tag">TEXTOS E INTELIGÊNCIA ARTIFICIAL</span>
-          <h1 class="main-title">Meus textos & <span class="highlight-text">Templates de IA</span></h1>
-          <p class="subtitle">
-            Configure os formatos das mensagens de ofertas e cupons, modelos de IA e palavras-chave bloqueadas.
-          </p>
-        </div>
-        <button class="btn btn-teal" (click)="saveSettings()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-          <span>{{ saveStatusText || 'Salvar Alterações' }}</span>
-        </button>
-      </div>
-
-      <!-- TABS SWITCHER -->
-      <div class="tabs-nav">
-        <button class="tab-btn" [class.active]="activeTab === 'templates'" (click)="activeTab = 'templates'">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
-          <span>Templates de Mensagem</span>
-        </button>
-
-        <button class="tab-btn" [class.active]="activeTab === 'ai'" (click)="activeTab = 'ai'">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-          <span>IA & Modelos</span>
-        </button>
-
-        <button class="tab-btn" [class.active]="activeTab === 'blacklist'" (click)="activeTab = 'blacklist'">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
-          <span>Blacklist ({{ settings.forbidden_keywords.length }})</span>
-        </button>
-
-        <button class="tab-btn" [class.active]="activeTab === 'credentials'" (click)="selectTab('credentials')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-          <span>Credenciais Afiliados</span>
-        </button>
-
-        <button class="tab-btn" [class.active]="activeTab === 'telegram'" (click)="selectTab('telegram')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-          <span>Sessão Telegram</span>
-          <span class="tab-dot" [class.online]="tgStatus.is_connected" [class.offline]="!tgStatus.is_connected"></span>
-        </button>
-
-        <button class="tab-btn" [class.active]="activeTab === 'backup'" (click)="selectTab('backup')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-          <span>Backup & Migração</span>
-        </button>
-      </div>
-
-      <!-- TAB 1: TEMPLATES -->
-      <div *ngIf="activeTab === 'templates'" class="tab-card card">
-        <div class="form-section">
-          <h2>Templates de Mensagem</h2>
-          <p class="section-desc">Formato padrão para anúncios de promoções (Template 1) e avisos de cupons (Template 2).</p>
-
-          <div class="field-block">
-            <label>Template Completo</label>
-            <textarea [(ngModel)]="settings.message_template" rows="12" class="code-textarea"></textarea>
-          </div>
-
-          <div class="field-block">
-            <label>Rodapé Padrão (Compartilhe nosso grupo)</label>
-            <input type="text" [(ngModel)]="settings.footer_text">
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 2: IA & MODELOS -->
-      <div *ngIf="activeTab === 'ai'" class="tab-card card">
-        <div class="form-section">
-          <h2>Reformatador com Inteligência Artificial</h2>
-          <p class="section-desc">Extrai os dados da promoção e remove menções de concorrentes sem alucinações.</p>
-
-          <div class="toggle-row">
-            <div>
-              <span class="toggle-title">Ativar Reescrita com IA</span>
-              <span class="toggle-desc">Se desativado, o bot realiza apenas a conversão dos links mantendo o texto original.</span>
-            </div>
-            <label class="switch">
-              <input type="checkbox" [(ngModel)]="settings.ai_enabled">
-              <span class="slider"></span>
-            </label>
-          </div>
-
-          <div class="grid-2-cols">
-            <div class="field-block">
-              <label>Modelo OpenRouter Primário</label>
-              <input type="text" [(ngModel)]="settings.openrouter_model_1">
-            </div>
-            <div class="field-block">
-              <label>Modelo OpenRouter Fallback</label>
-              <input type="text" [(ngModel)]="settings.openrouter_model_2">
-            </div>
-          </div>
-
-          <div class="field-block">
-            <label>System Prompt do Gemini / OpenRouter</label>
-            <textarea [(ngModel)]="settings.gemini_prompt" rows="8" class="code-textarea"></textarea>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 3: BLACKLIST -->
-      <div *ngIf="activeTab === 'blacklist'" class="tab-card card">
-        <div class="form-section">
-          <h2>Palavras e Links Proibidos (Blacklist)</h2>
-          <p class="section-desc">Qualquer linha ou termo contendo essas palavras é removido automaticamente das mensagens antes do envio.</p>
-
-          <div class="add-term-bar">
-            <input type="text" [(ngModel)]="newKeyword" placeholder="Digite uma nova palavra ou domínio para bloquear..." (keyup.enter)="addKeyword()">
-            <button class="btn btn-teal" (click)="addKeyword()">Bloquear Termo</button>
-          </div>
-
-          <div class="keywords-wrap">
-            <span *ngFor="let kw of settings.forbidden_keywords; let i = index" class="keyword-chip">
-              <span>{{ kw }}</span>
-              <button class="remove-chip-btn" (click)="removeKeyword(i)">×</button>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 4: CREDENCIAIS -->
-      <div *ngIf="activeTab === 'credentials'" class="tab-card card">
-        <div class="form-section">
-          <h2>Credenciais e Chaves de API</h2>
-          <p class="section-desc">Chaves seguras das plataformas para conversão instantânea de links.</p>
-
-          <div class="grid-2-cols">
-            <div class="field-block">
-              <label>Shopee App ID</label>
-              <input type="text" [(ngModel)]="settings.shopee_app_id">
-            </div>
-            <div class="field-block">
-              <label>Shopee App Secret</label>
-              <input type="password" [(ngModel)]="settings.shopee_app_secret">
-            </div>
-          </div>
-
-          <div class="grid-2-cols">
-            <div class="field-block">
-              <label>OpenRouter API Key</label>
-              <input type="password" [(ngModel)]="settings.openrouter_api_key">
-            </div>
-            <div class="field-block">
-              <label>Groq API Key</label>
-              <input type="password" [(ngModel)]="settings.groq_api_key">
-            </div>
-          </div>
-
-          <div class="grid-2-cols">
-            <div class="field-block">
-              <label>Telegram API ID</label>
-              <input type="number" [(ngModel)]="settings.telegram_api_id">
-            </div>
-            <div class="field-block">
-              <label>Telegram API Hash</label>
-              <input type="password" [(ngModel)]="settings.telegram_api_hash">
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 5: SESSÃO TELEGRAM -->
-      <div *ngIf="activeTab === 'telegram'" class="tab-card card">
-        <div class="form-section">
-          <div class="session-header-row">
-            <div>
-              <h2>Gerenciamento da Sessão Telegram</h2>
-              <p class="section-desc">Conecte e administre a conta do Telegram usada pelo PardalBot para capturar ofertas dos canais de origem.</p>
-            </div>
-            <button class="btn btn-secondary btn-sm" (click)="loadTelegramStatus()" [disabled]="tgLoading">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon" [class.spin]="tgLoading"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-              <span>{{ tgLoading ? 'Verificando...' : 'Atualizar Status' }}</span>
-            </button>
-          </div>
-
-          <!-- ALERT FEEDBACK -->
-          <div *ngIf="tgAlertMessage" class="alert-banner" [class.alert-success]="tgAlertType === 'success'" [class.alert-danger]="tgAlertType === 'danger'" [class.alert-info]="tgAlertType === 'info'">
-            <span class="alert-text">{{ tgAlertMessage }}</span>
-            <button class="alert-close" (click)="tgAlertMessage = ''">×</button>
-          </div>
-
-          <!-- STATUS HERO CARD -->
-          <div class="tg-status-card" [class.connected]="tgStatus.is_connected">
-            <div class="tg-status-avatar" [class.active-avatar]="tgStatus.is_connected">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-            </div>
-            <div class="tg-status-info">
-              <div class="tg-status-title-row">
-                <h3>{{ tgStatus.is_connected ? (tgStatus.account_name || 'Conta Conectada') : 'Sessão Não Conectada' }}</h3>
-                <span class="badge" [class.badge-success]="tgStatus.is_connected" [class.badge-warning]="!tgStatus.is_connected">
-                  {{ tgStatus.is_connected ? '● CONECTADO & AUTORIZADO' : '○ DESCONECTADO' }}
-                </span>
-              </div>
-              <div class="tg-meta-grid">
-                <div class="tg-meta-item">
-                  <span class="meta-label">Telefone:</span>
-                  <span class="meta-val">{{ tgStatus.phone || 'Não informado' }}</span>
-                </div>
-                <div class="tg-meta-item" *ngIf="tgStatus.username">
-                  <span class="meta-label">Username:</span>
-                  <span class="meta-val text-cyan">{{ tgStatus.username }}</span>
-                </div>
-                <div class="tg-meta-item">
-                  <span class="meta-label">Arquivo de Sessão:</span>
-                  <span class="meta-val code-font">{{ tgStatus.session_file || 'telegram_user.session' }}</span>
-                </div>
-                <div class="tg-meta-item">
-                  <span class="meta-label">API Hash:</span>
-                  <span class="meta-val code-font">{{ tgStatus.api_hash_masked || 'Padrão MTProto' }}</span>
-                </div>
-              </div>
-            </div>
-            <div class="tg-status-actions" *ngIf="tgStatus.is_connected">
-              <button class="btn btn-danger btn-sm" (click)="showDisconnectConfirm = true" [disabled]="tgLoading">
-                <span>Desconectar Conta</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- MÉTODOS DE CONEXÃO -->
-          <div class="connection-methods-section">
-            <div class="method-selector-tabs">
-              <button class="method-tab-btn" [class.active]="tgAuthMode === 'phone'" (click)="tgAuthMode = 'phone'">
-                <span>Opção 1: Conectar por Telefone (SMS/Telegram)</span>
-              </button>
-              <button class="method-tab-btn" [class.active]="tgAuthMode === 'string_session'" (click)="tgAuthMode = 'string_session'">
-                <span>Opção 2: Importar StringSession</span>
-              </button>
-              <button class="method-tab-btn" [class.active]="tgAuthMode === 'custom_api'" (click)="tgAuthMode = 'custom_api'">
-                <span>Opção 3: Credenciais da API (my.telegram.org)</span>
-              </button>
-            </div>
-
-            <!-- OPÇÃO 1: POR TELEFONE -->
-            <div *ngIf="tgAuthMode === 'phone'" class="method-box">
-              <h4>Autenticação via Código de Acesso</h4>
-              <p class="field-hint">Informe seu telefone internacional com DDI (ex: +55 11 99999-9999). O Telegram enviará o código de verificação diretamente para o seu aplicativo ou SMS.</p>
-
-              <!-- ETAPA 1: ENVIAR NÚMERO -->
-              <div *ngIf="!tgCodeSent" class="phone-row-form">
-                <div class="field-block">
-                  <label>Número de Telefone Internacional</label>
-                  <div class="inline-input-group">
-                    <input type="text" [(ngModel)]="tgPhoneInput" placeholder="+55 11 99999-9999" [disabled]="tgLoading">
-                    <button class="btn btn-teal" (click)="sendTelegramCode()" [disabled]="!tgPhoneInput.trim() || tgLoading">
-                      <span>{{ tgLoading ? 'Enviando...' : 'Enviar Código' }}</span>
-                    </button>
-                  </div>
-                  <span class="field-subtext">Formato: +55 (DDD) 9XXXX-XXXX ou com código do país desejado.</span>
-                </div>
-              </div>
-
-              <!-- ETAPA 2: DIGITAR CÓDIGO -->
-              <div *ngIf="tgCodeSent" class="code-verify-form">
-                <div class="sent-notice-box">
-                  <span>Código enviado para <strong>{{ tgFormattedPhone || tgPhoneInput }}</strong></span>
-                  <button class="btn-link" (click)="resetTelegramPhoneFlow()">Alterar telefone</button>
-                </div>
-
-                <div class="field-block">
-                  <label>Código de Verificação Recebido</label>
-                  <input type="text" [(ngModel)]="tgVerificationCode" placeholder="Ex: 58291" class="code-input" [disabled]="tgLoading">
-                  <span class="field-subtext">Verifique o chat oficial de notificações do Telegram no seu celular.</span>
-                </div>
-
-                <div class="field-block" *ngIf="tgNeedsPassword">
-                  <label>Senha de 2 Etapas (2FA Cloud Password)</label>
-                  <input type="password" [(ngModel)]="tg2faPassword" placeholder="Digite sua senha de duas etapas..." [disabled]="tgLoading">
-                  <span class="field-subtext">Sua conta do Telegram exige verificação em duas etapas.</span>
-                </div>
-
-                <div class="form-actions-row">
-                  <button class="btn btn-secondary" (click)="resetTelegramPhoneFlow()" [disabled]="tgLoading">Cancelar</button>
-                  <button class="btn btn-teal" (click)="verifyTelegramCode()" [disabled]="!tgVerificationCode.trim() || tgLoading">
-                    <span>{{ tgLoading ? 'Autenticando...' : 'Confirmar e Conectar' }}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- OPÇÃO 2: IMPORTAR STRINGSESSION -->
-            <div *ngIf="tgAuthMode === 'string_session'" class="method-box">
-              <h4>Importar Telethon StringSession</h4>
-              <p class="field-hint">Caso você já tenha uma sessão ativa gerada no Telethon, cole o token abaixo para ativá-la no PardalBot sem necessidade de código SMS.</p>
-
-              <div class="field-block">
-                <label>String de Sessão Telethon</label>
-                <textarea [(ngModel)]="tgStringSessionInput" rows="5" class="code-textarea" placeholder="1BVtsOHQBu7... cole a chave de sessão aqui" [disabled]="tgLoading"></textarea>
-              </div>
-
-              <button class="btn btn-teal" (click)="importTelegramSession()" [disabled]="!tgStringSessionInput.trim() || tgLoading">
-                <span>{{ tgLoading ? 'Importando...' : 'Validar e Ativar Sessão' }}</span>
-              </button>
-            </div>
-
-            <!-- OPÇÃO 3: CREDENCIAIS API PERSONALIZADAS -->
-            <div *ngIf="tgAuthMode === 'custom_api'" class="method-box">
-              <h4>Chaves de API do Telegram (my.telegram.org)</h4>
-              <p class="field-hint">Por padrão o sistema já utiliza credenciais válidas do Telegram. Preencha aqui apenas se você criou uma aplicação própria no portal oficial.</p>
-
-              <div class="grid-2-cols">
-                <div class="field-block">
-                  <label>Telegram API ID</label>
-                  <input type="text" [(ngModel)]="settings.telegram_api_id" placeholder="Ex: 12345678">
-                </div>
-                <div class="field-block">
-                  <label>Telegram API Hash</label>
-                  <input type="password" [(ngModel)]="settings.telegram_api_hash" placeholder="Ex: 0123456789abcdef0123456789abcdef">
-                </div>
-              </div>
-              <button class="btn btn-teal" (click)="saveSettings()">
-                <span>Salvar Credenciais da API</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 6: BACKUP & MIGRAÇÃO DE CONTA -->
-      <div *ngIf="activeTab === 'backup'" class="tab-card card">
-        <div class="form-section">
-          <h2>Backup & Migração de Conta</h2>
-          <p class="section-desc">Exporte todas as suas configurações, canais monitorados, grupos e sessão do Telegram para migrar entre instâncias ou manter uma cópia de segurança.</p>
-
-          <div class="backup-grid">
-            <!-- EXPORT CARD -->
-            <div class="backup-box">
-              <div class="backup-box-header">
-                <div class="backup-icon-wrapper export-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="backup-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                </div>
-                <div>
-                  <h3 class="backup-box-title">Exportar Dados da Conta</h3>
-                  <p class="backup-box-desc">Gera um arquivo .json seguro com todos os seus dados para download.</p>
-                </div>
-              </div>
-
-              <div class="backup-included-items">
-                <div class="included-item">✓ Configurações & Chaves de IA/Afiliados</div>
-                <div class="included-item">✓ Canais Telegram Monitorados</div>
-                <div class="included-item">✓ Grupos de Destino WhatsApp & Palavras-chave</div>
-                <div class="included-item">✓ Canais de Destino Telegram</div>
-                <div class="included-item">✓ Sessões de Chips WhatsApp</div>
-                <div class="included-item">✓ Sessão Autenticada do Telegram (Login ativo)</div>
-              </div>
-
-              <button class="btn btn-teal btn-full" (click)="downloadAccountBackup()" [disabled]="backupExporting">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                <span>{{ backupExporting ? 'Gerando Backup...' : 'Baixar Arquivo de Backup (.json)' }}</span>
-              </button>
-            </div>
-
-            <!-- IMPORT CARD -->
-            <div class="backup-box">
-              <div class="backup-box-header">
-                <div class="backup-icon-wrapper import-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="backup-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                </div>
-                <div>
-                  <h3 class="backup-box-title">Restaurar / Importar no CasaOS</h3>
-                  <p class="backup-box-desc">Carregue o arquivo .json gerado localmente para deixar esta instância idêntica.</p>
-                </div>
-              </div>
-
-              <div class="import-dropzone" (click)="fileInput.click()">
-                <input #fileInput type="file" accept=".json" (change)="onBackupFileSelected($event)" style="display: none;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="dropzone-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="12" y2="12"></line><line x1="15" y1="15" x2="12" y2="12"></line></svg>
-                <div class="dropzone-text" *ngIf="!selectedBackupFile">
-                  <strong>Clique aqui para selecionar o arquivo .json</strong>
-                  <span>ou arraste o arquivo de backup para cá</span>
-                </div>
-                <div class="dropzone-text selected" *ngIf="selectedBackupFile">
-                  <strong class="text-cyan">📄 {{ selectedBackupFile.name }}</strong>
-                  <span>{{ (selectedBackupFile.size / 1024).toFixed(1) }} KB</span>
-                </div>
-              </div>
-
-              <div *ngIf="backupSuccessMessage" class="backup-alert success">
-                {{ backupSuccessMessage }}
-              </div>
-              <div *ngIf="backupErrorMessage" class="backup-alert error">
-                {{ backupErrorMessage }}
-              </div>
-
-              <button class="btn btn-secondary btn-full" (click)="uploadAccountBackup()" [disabled]="!selectedBackupFile || backupImporting">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="m8 17 4-4 4 4"></path><path d="M12 13v9"></path></svg>
-                <span>{{ backupImporting ? 'Restaurando dados...' : 'Restaurar Backup Nesta Instância' }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- MODAL: CONFIRMAR DESCONEXÃO TELEGRAM -->
-      <div *ngIf="showDisconnectConfirm" class="modal-backdrop">
-        <div class="modal-dialog card confirm-modal-card">
-          <div class="modal-header">
-            <h3 class="modal-title">Desconectar Conta do Telegram</h3>
-            <button class="close-btn" (click)="showDisconnectConfirm = false">×</button>
-          </div>
-          <div class="modal-body">
-            <p>Deseja realmente desconectar a sessão do Telegram <strong>{{ tgStatus.account_name || tgStatus.phone }}</strong>?</p>
-            <p class="field-hint">O bot não conseguirá monitorar os canais de ofertas até que você realize um novo login.</p>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="showDisconnectConfirm = false">Cancelar</button>
-            <button class="btn btn-danger" (click)="executeDisconnectTelegram()" [disabled]="tgLoading">
-              <span>{{ tgLoading ? 'Desconectando...' : 'Sim, Desconectar' }}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './settings.component.html',
   styles: [`
     .settings-page {
       display: flex;
@@ -1068,10 +652,129 @@ import { Settings } from '../../core/models';
       border: 1px solid rgba(239, 68, 68, 0.3);
       color: #f87171;
     }
+
+    /* CREDENTIALS MATRIX STYLES */
+    .credentials-status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .status-summary-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .status-summary-card.is-ok {
+      border-color: rgba(34, 197, 94, 0.35);
+      background: rgba(34, 197, 94, 0.03);
+    }
+
+    .status-summary-card.is-pending {
+      border-color: rgba(245, 158, 11, 0.35);
+      background: rgba(245, 158, 11, 0.03);
+    }
+
+    .status-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .status-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+    }
+
+    .status-indicator-pill {
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 0.15rem 0.5rem;
+      border-radius: 12px;
+      letter-spacing: 0.04em;
+    }
+
+    .status-indicator-pill.ok {
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+    }
+
+    .status-indicator-pill.pending {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+    }
+
+    .status-value {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .credential-box-section {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .box-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .box-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .info-callout {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.82rem;
+      color: var(--text-primary);
+    }
+
+    .info-callout code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #38bdf8;
+      align-self: flex-start;
+    }
+
+    .info-callout small {
+      color: var(--text-secondary);
+    }
   `]
 })
 export class SettingsComponent implements OnInit {
   api = inject(ApiService);
+  route = inject(ActivatedRoute);
+  router = inject(Router);
 
   activeTab: 'templates' | 'ai' | 'blacklist' | 'credentials' | 'telegram' | 'backup' = 'templates';
 
@@ -1090,6 +793,13 @@ export class SettingsComponent implements OnInit {
     forbidden_keywords: [],
     shopee_app_id: '',
     shopee_app_secret: '',
+    shopee_subid: '',
+    amazon_tag: '',
+    magalu_store: '',
+    waha_base_url: 'http://192.168.1.25:3000',
+    waha_api_key: '6f1186b6522246c1b0015b9117d56d05',
+    telegram_bot_token: '',
+    telegram_admin_chat_id: '',
     openrouter_api_key: '',
     groq_api_key: '',
     google_api_key: '',
@@ -1100,6 +810,9 @@ export class SettingsComponent implements OnInit {
 
   newKeyword = '';
   saveStatusText = '';
+  wahaTesting = false;
+  wahaTestResult = '';
+  wahaTestOk = false;
 
   // Telegram Session State
   tgStatus = {
@@ -1129,12 +842,23 @@ export class SettingsComponent implements OnInit {
   showDisconnectConfirm = false;
 
   ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      const tab = params['tab'];
+      if (tab && ['templates', 'ai', 'blacklist', 'credentials', 'telegram', 'backup'].includes(tab)) {
+        this.selectTab(tab as any);
+      }
+    });
     this.loadSettings();
     this.loadTelegramStatus();
   }
 
   selectTab(tab: 'templates' | 'ai' | 'blacklist' | 'credentials' | 'telegram' | 'backup') {
     this.activeTab = tab;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab },
+      queryParamsHandling: 'merge'
+    });
     if (tab === 'telegram') {
       this.loadTelegramStatus();
     }
@@ -1144,8 +868,51 @@ export class SettingsComponent implements OnInit {
     this.api.getSettings().subscribe({
       next: (data) => {
         this.settings = { ...this.settings, ...data };
+        if (!this.settings.waha_base_url || this.settings.waha_base_url.includes('localhost') || this.settings.waha_base_url.includes('127.0.0.1')) {
+          this.settings.waha_base_url = 'http://192.168.1.25:3000';
+        }
+        if (!this.settings.waha_api_key) {
+          this.settings.waha_api_key = '6f1186b6522246c1b0015b9117d56d05';
+        }
       },
-      error: () => {}
+      error: () => { }
+    });
+  }
+
+  testWahaConnection() {
+    this.wahaTesting = true;
+    this.wahaTestResult = '';
+    // Salva URL e Key antes de testar
+    this.api.updateSettings({
+      waha_base_url: this.settings.waha_base_url,
+      waha_api_key: this.settings.waha_api_key
+    }).subscribe({
+      next: () => {
+        this.api.getWahaSessions().subscribe({
+          next: (res: any) => {
+            this.wahaTesting = false;
+            const sessions = Array.isArray(res) ? res : (Array.isArray(res?.sessions) ? res.sessions : []);
+            if (sessions.length > 0) {
+              const details = sessions.map((s: any) => `${s.name} (${s.status || 'ativo'})`).join(', ');
+              this.wahaTestResult = `✅ Conexão bem-sucedida! ${sessions.length} sessão(ões) encontrada(s): ${details}`;
+              this.wahaTestOk = true;
+            } else {
+              this.wahaTestResult = `⚠️ Conectou ao WAHA em ${this.settings.waha_base_url}, mas a lista de sessões retornou vazia. Verifique se as sessões estão criadas neste servidor.`;
+              this.wahaTestOk = true;
+            }
+          },
+          error: (err) => {
+            this.wahaTesting = false;
+            this.wahaTestResult = `❌ Falha ao consultar sessões no WAHA: ${err?.error?.detail || err.message || 'Erro de rede'}`;
+            this.wahaTestOk = false;
+          }
+        });
+      },
+      error: (err) => {
+        this.wahaTesting = false;
+        this.wahaTestResult = `❌ Erro ao salvar configurações: ${err.message}`;
+        this.wahaTestOk = false;
+      }
     });
   }
 

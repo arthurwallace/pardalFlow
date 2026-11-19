@@ -27,13 +27,26 @@ export interface Channel {
 }
 
 export interface WhatsAppGroup {
-  id_db: string;
-  user_id: string;
+  id_db?: string;
+  user_id?: string;
   name: string;
   id: string;
-  keywords: string[];
+  group_id?: string;
+  group_type?: 'destination' | 'monitored' | string;
+  keywords?: string[];
   footer_text?: string;
   active?: boolean;
+  is_active?: boolean;
+  ml_tag?: string;
+  shopee_subid?: string;
+  amazon_tag?: string;
+  magalu_store?: string;
+  session_name?: string;
+  custom_template?: string;
+  is_monitored?: boolean;
+  mirror_enabled?: boolean;
+  target_whatsapp_groups?: string[];
+  mirror_to_group_ids?: string[];
 }
 
 export interface TelegramDestination {
@@ -45,10 +58,29 @@ export interface TelegramDestination {
 }
 
 export interface WhatsAppSession {
-  id_db: string;
-  user_id: string;
+  id_db?: string;
+  user_id?: string;
   name: string;
-  active: boolean;
+  phone?: string;
+  status?: string;
+  active?: boolean;
+  engine?: string;
+  battery?: number;
+}
+
+export interface WahaGroupItem {
+  id: string;
+  name: string;
+  participants_count?: number;
+  is_announce?: boolean;
+  is_registered?: boolean;
+  is_destination?: boolean;
+  is_monitored?: boolean;
+  mirror_enabled?: boolean;
+  ml_tag?: string;
+  shopee_subid?: string;
+  amazon_tag?: string;
+  magalu_store?: string;
 }
 
 export interface Settings {
@@ -75,11 +107,20 @@ export interface Settings {
   custom_openrouter_api_key?: string;
   shopee_app_id?: string;
   shopee_app_secret?: string;
+  shopee_subid?: string;
   openrouter_api_key?: string;
   groq_api_key?: string;
   google_api_key?: string;
   telegram_api_id?: number | string;
   telegram_api_hash?: string;
+  waha_base_url?: string;
+  waha_api_key?: string;
+  amazon_tag?: string;
+  magalu_store?: string;
+  telegram_bot_token?: string;
+  telegram_admin_chat_id?: string;
+  queue_delay_seconds?: number;
+  auto_dispatch_enabled?: boolean;
 }
 
 export interface DashboardMetrics {
@@ -146,4 +187,68 @@ export interface DispatchedOffer {
 export interface DispatchedOffersResponse {
   total: number;
   items: DispatchedOffer[];
+}
+
+export interface PlatformCookie {
+  platform: string;
+  has_cookies: boolean;
+  cookies: string;
+  status: 'valid' | 'expired' | 'pending' | 'unknown';
+  last_updated?: string;
+  extra_data?: any;
+}
+
+export interface QueueCounts {
+  ofertas: number;
+  cupons: number;
+  broadcast: number;
+  total: number;
+}
+
+export interface QueueItem {
+  id: string;
+  queue_type: string;
+  payload: {
+    text: string;
+    media_path?: string;
+    destination_ids?: string[];
+    preview_url?: string;
+  };
+  status: string;
+  attempts: number;
+  error_message?: string;
+  created_at: string;
+  scheduled_for: string;
+}
+
+export interface VitrineProduct {
+  id: string;
+  item_id: string;
+  shop_id: string;
+  title: string;
+  price: string;
+  commission_rate: number;
+  commission_value: number;
+  image_url: string;
+  product_url: string;
+  affiliate_url: string;
+  category: string;
+  status: 'active' | 'paused' | 'posted';
+  created_at: string;
+}
+
+export interface GroupEventStat {
+  group_name: string;
+  entries: number;
+  exits: number;
+  net: number;
+}
+
+export interface GroupEventsSummary {
+  period_days: number;
+  total_entries: number;
+  total_exits: number;
+  net_growth: number;
+  by_group: GroupEventStat[];
+  recent_events: any[];
 }

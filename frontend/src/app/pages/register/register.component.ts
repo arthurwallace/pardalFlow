@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+﻿import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -8,46 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
   selector: 'app-register',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
-  template: `
-    <div class="auth-wrap">
-      <div class="auth-box card">
-        <div class="brand-row">
-          <span class="brand-name">PARDAL<span class="highlight">FLOW</span></span>
-          <span class="brand-tagline">Criar Ambiente Privado de Afiliado</span>
-        </div>
-
-        <form (ngSubmit)="onRegister()" class="auth-form">
-          <div *ngIf="errorMessage" class="badge badge-danger alert-tag">
-            {{ errorMessage }}
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Nome Completo</label>
-            <input type="text" [(ngModel)]="fullName" name="fullName" class="form-input" placeholder="Seu Nome" required>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">E-mail</label>
-            <input type="email" [(ngModel)]="email" name="email" class="form-input" placeholder="seu@email.com" required>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Senha (mínimo 6 caracteres)</label>
-            <input type="password" [(ngModel)]="password" name="password" class="form-input" placeholder="••••••••" required>
-          </div>
-
-          <button type="submit" [disabled]="loading" class="btn btn-primary btn-submit">
-            {{ loading ? 'Criando conta...' : 'Cadastrar e Começar' }}
-          </button>
-        </form>
-
-        <div class="auth-bottom">
-          <span>Já tem cadastro?</span>
-          <a routerLink="/login" class="link">Fazer login</a>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './register.component.html',
   styles: [`
     .auth-wrap {
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
